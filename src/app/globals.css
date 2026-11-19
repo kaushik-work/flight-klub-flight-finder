@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f9fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --primary: #8b1d24;
+  --primary-foreground: #ffffff;
+  --secondary: #fdf2f2;
+  --secondary-foreground: #6b141a;
+  --muted: #f2f4f6;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
+  --ring: #8b1d24;
+  --radius: 0.75rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-sans);
+  --font-label: var(--font-label);
+  --radius-lg: var(--radius);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, sans-serif;
+}
+
+.font-label {
+  font-family: var(--font-label), Arial, sans-serif;
 }
