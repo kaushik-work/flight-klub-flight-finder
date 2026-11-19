@@ -6,9 +6,10 @@ import { ORIGINS, type Route, inr, savingPct } from "@/lib/fares";
 
 export default function SavingsCalc({ routes }: { routes: Route[] }) {
   const [origin, setOrigin] = useState(ORIGINS[0].slug);
+  const [intl, setIntl] = useState(true);
   const [dest, setDest] = useState("");
   const [pax, setPax] = useState(2);
-  const options = routes.filter((r) => r.o === origin && r.intl).sort((a, b) => a.city.localeCompare(b.city));
+  const options = routes.filter((r) => r.o === origin && r.intl === intl).sort((a, b) => a.city.localeCompare(b.city));
   const f = options.find((r) => r.d === dest);
   const saved = f ? Math.max(0, f.avg - f.price) * pax : 0;
   const sel = "font-label h-12 w-full appearance-none rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white outline-none focus:border-white/50 [&>option]:text-foreground";
@@ -17,8 +18,16 @@ export default function SavingsCalc({ routes }: { routes: Route[] }) {
     <div className="grid gap-6 rounded-3xl bg-[#040609] p-6 text-white sm:p-10 lg:grid-cols-2 lg:items-center">
       <div>
         <h2 className="text-2xl font-extrabold sm:text-3xl">Want to see how much you could save?</h2>
-        <p className="mt-2 text-[#88909c]">Pick where you fly from and where to. We compare the best fare with the average for that route.</p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <p className="mt-2 text-[#88909c]">Pick international or domestic, where you fly from and where to. We compare the best fare with the average for that route.</p>
+        <div role="tablist" aria-label="Trip type" className="mt-6 inline-flex gap-1 rounded-xl border border-white/15 bg-white/5 p-1">
+          {([[true, "International"], [false, "Domestic"]] as const).map(([v, t]) => (
+            <button key={t} role="tab" aria-selected={intl === v} onClick={() => { setIntl(v); setDest(""); }}
+              className={`font-label h-9 rounded-lg px-4 text-sm font-semibold transition ${intl === v ? "bg-primary text-white shadow-sm" : "text-[#88909c] hover:text-white"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <select aria-label="Flying from" className={sel} value={origin} onChange={(e) => { setOrigin(e.target.value); setDest(""); }}>
             {ORIGINS.map((o) => <option key={o.slug} value={o.slug}>{o.name}</option>)}
           </select>

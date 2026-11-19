@@ -7,7 +7,8 @@ import { ORIGINS, type Route, formatDuration, formatStops, gradientFor, inr, mon
 export default function DealsGrid({ routes }: { routes: Route[] }) {
   const have = ORIGINS.filter((o) => routes.some((r) => r.o === o.slug));
   const [origin, setOrigin] = useState(have[0]?.slug ?? ORIGINS[0].slug);
-  const deals = routes.filter((r) => r.o === origin && r.intl).sort((a, b) => a.price - b.price).slice(0, 6);
+  const [intl, setIntl] = useState(true);
+  const deals = routes.filter((r) => r.o === origin && r.intl === intl).sort((a, b) => a.price - b.price).slice(0, 6);
 
   if (!have.length) {
     return <p className="rounded-xl bg-muted p-6 text-muted-foreground">Fares are being updated. Please check back shortly.</p>;
@@ -15,6 +16,14 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
 
   return (
     <div>
+      <div role="tablist" aria-label="Trip type" className="mb-4 inline-flex gap-1 rounded-xl border border-border bg-muted p-1">
+        {([[true, "International"], [false, "Domestic"]] as const).map(([v, t]) => (
+          <button key={t} role="tab" aria-selected={intl === v} onClick={() => setIntl(v)}
+            className={`font-label h-9 rounded-lg px-4 text-sm font-semibold transition ${intl === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            {t}
+          </button>
+        ))}
+      </div>
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2" role="tablist" aria-label="Flying from">
         {have.map((o) => (
           <button key={o.slug} role="tab" aria-selected={origin === o.slug} onClick={() => setOrigin(o.slug)}
@@ -23,6 +32,9 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
           </button>
         ))}
       </div>
+      {deals.length === 0 && (
+        <p className="mt-5 rounded-xl bg-muted p-6 text-muted-foreground">No {intl ? "international" : "domestic"} fares from this city right now.</p>
+      )}
       <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {deals.map((f) => {
           const pct = savingPct(f);
