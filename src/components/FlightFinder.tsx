@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   ORIGINS, type Origin, type Row, formatDay, formatDuration, formatRange, formatStops, gradientFor, inr, monthLabel,
@@ -49,16 +50,27 @@ export default function FlightFinder({
   initialDest = "",
   initialNights = null,
   initialMonth = null,
+  fromExplicit = true,
 }: {
   origin: Origin;
   rows: Row[];
   initialDest?: string;
   initialNights?: number | null;
   initialMonth?: string | null;
+  fromExplicit?: boolean;
 }) {
   const router = useRouter();
   const [moving, startMove] = useTransition();
   const { ready, user, alerts, toggleAlert } = useAuth();
+  const { origin: near, setUserOrigin } = useHomeOrigin();
+
+  // No city in the URL: use the nearest airport once it is known.
+  useEffect(() => {
+    if (fromExplicit || !near || near === origin.slug) return;
+    const q = new URLSearchParams(window.location.search);
+    q.set("from", near);
+    router.replace(`/flight-finder?${q}`);
+  }, [fromExplicit, near, origin.slug, router]);
   const [intl, setIntl] = useState(rows.find((r) => r.d === initialDest)?.intl ?? true);
   const [dest, setDest] = useState(initialDest);
   const [nights, setNights] = useState<number | null>(initialNights);
@@ -110,7 +122,7 @@ export default function FlightFinder({
             className={field}
             value={origin.slug}
             disabled={moving}
-            onChange={(e) => startMove(() => router.push(`/flight-finder?from=${e.target.value}`))}
+            onChange={(e) => { setUserOrigin(e.target.value); startMove(() => router.push(`/flight-finder?from=${e.target.value}`)); }}
           >
             {ORIGINS.map((o) => <option key={o.slug} value={o.slug}>{o.name}</option>)}
           </select>

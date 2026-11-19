@@ -67,7 +67,7 @@ async function FinderContent({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
-      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} initialDest={dest} initialNights={n} initialMonth={m} />
+      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} initialDest={dest} initialNights={n} initialMonth={m} fromExplicit={!!findOrigin(from)} />
     </>
   );
 }

@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { ORIGINS, type Route, inr, savingPct } from "@/lib/fares";
 
 export default function SavingsCalc({ routes }: { routes: Route[] }) {
-  const [origin, setOrigin] = useState(ORIGINS[0].slug);
+  const { origin: near } = useHomeOrigin();
+  const [picked, setOrigin] = useState<string | null>(null);
+  const origin = picked ?? near ?? ORIGINS[0].slug;
   const [intl, setIntl] = useState(true);
   const [dest, setDest] = useState("");
   const [pax, setPax] = useState(2);

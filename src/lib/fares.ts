@@ -15,6 +15,28 @@ export const ORIGINS: Origin[] = [
 ];
 export const DEFAULT_ORIGIN = ORIGINS[0];
 
+// Airport coordinates, used to pick the nearest departure city from a visitor's location.
+const AIRPORT: Record<string, [number, number]> = {
+  bangalore: [13.1986, 77.7066], mumbai: [19.0896, 72.8656], delhi: [28.5562, 77.1], hyderabad: [17.2403, 78.4294],
+  chennai: [12.9941, 80.1709], kolkata: [22.6547, 88.4467], pune: [18.5821, 73.9197], ahmedabad: [23.0772, 72.6347],
+};
+
+const km = (a: [number, number], b: [number, number]) => {
+  const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLng = (b[1] - a[1]) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+};
+
+/** The covered departure city nearest to a point, or null when none is within maxKm (e.g. the visitor is abroad). */
+export function nearestOrigin(lat: number, lng: number, maxKm = 1000): Origin | null {
+  let best: { o: Origin; d: number } | null = null;
+  for (const o of ORIGINS) {
+    const d = km([lat, lng], AIRPORT[o.slug]);
+    if (!best || d < best.d) best = { o, d };
+  }
+  return best && best.d <= maxKm ? best.o : null;
+}
+
 export function findOrigin(v?: string | null): Origin | undefined {
   const s = v?.trim().toLowerCase();
   return ORIGINS.find((o) => o.slug === s || o.name.toLowerCase() === s);

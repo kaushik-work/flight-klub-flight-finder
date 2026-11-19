@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { SITE_DESC, SITE_NAME, SITE_URL } from "@/lib/site";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { LocationProvider } from "@/components/location/LocationProvider";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({ variable: "--font-sans", subsets: ["latin"] });
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-IN" className={`${sans.variable} ${label.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col"><AuthProvider>{children}</AuthProvider></body>
+      <body className="min-h-full flex flex-col"><AuthProvider><LocationProvider>{children}</LocationProvider></AuthProvider></body>
     </html>
   );
 }

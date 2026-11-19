@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import BlogCover from "@/components/BlogCover";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { getPost, posts, related } from "@/lib/blog";
@@ -22,8 +22,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     description: post.metaDescription,
     alternates: { canonical: `/blog/${post.id}` },
     keywords: post.tags,
-    openGraph: { type: "article", title: post.title, description: post.metaDescription, url: `/blog/${post.id}`, images: [post.image], modifiedTime: post.dateModified },
-    twitter: { title: post.title, description: post.metaDescription, images: [post.image] },
+    openGraph: { type: "article", title: post.title, description: post.metaDescription, url: `/blog/${post.id}`, modifiedTime: post.dateModified },
+    twitter: { title: post.title, description: post.metaDescription },
   };
 }
 
@@ -36,7 +36,6 @@ async function PostBody({ params }: { params: Promise<{ id: string }> }) {
     "@type": "Article",
     headline: post.title,
     description: post.metaDescription,
-    image: post.image,
     datePublished: post.dateModified,
     dateModified: post.dateModified,
     author: { "@type": "Organization", name: SITE_NAME },
@@ -56,9 +55,7 @@ async function PostBody({ params }: { params: Promise<{ id: string }> }) {
         <article>
           <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{post.title}</h1>
           <p className="font-label mt-3 text-sm text-muted-foreground">{post.date} · {post.readTime}</p>
-          <div className="relative mt-6 aspect-[16/9] overflow-hidden rounded-2xl bg-muted">
-            <Image src={post.image} alt={post.title} fill priority sizes="(min-width:768px) 768px, 100vw" className="object-cover" />
-          </div>
+          <div className="mt-6"><BlogCover post={post} large /></div>
           <div className="mt-8 text-[17px] leading-relaxed">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
