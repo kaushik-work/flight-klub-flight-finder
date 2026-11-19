@@ -1,74 +1,139 @@
-// Swap this module for a real fares API/DB later; the UI only depends on these types.
-export type Fare = {
-  code: string;
-  city: string;
-  country: string;
-  airline: string;
-  stops: number;
-  hours: number;
-  nights: number;
-  price: number; // INR, round trip
-  month: string; // e.g. "2027-02"
-  gradient: string;
-  intl?: boolean;
-};
+// Pure helpers and types shared by server and client. Real fares come from src/lib/flight-fares/store.ts.
 
-export const ORIGINS = [
-  "Bangalore", "Delhi", "Mumbai", "Hyderabad", "Chennai", "Kolkata", "Pune", "Kochi",
+export type Origin = { slug: string; name: string };
+
+// The cities the fare scraper covers.
+export const ORIGINS: Origin[] = [
+  { slug: "bangalore", name: "Bangalore" },
+  { slug: "mumbai", name: "Mumbai" },
+  { slug: "delhi", name: "Delhi" },
+  { slug: "hyderabad", name: "Hyderabad" },
+  { slug: "chennai", name: "Chennai" },
+  { slug: "kolkata", name: "Kolkata" },
+  { slug: "pune", name: "Pune" },
+  { slug: "ahmedabad", name: "Ahmedabad" },
+];
+export const DEFAULT_ORIGIN = ORIGINS[0];
+
+export function findOrigin(v?: string | null): Origin | undefined {
+  const s = v?.trim().toLowerCase();
+  return ORIGINS.find((o) => o.slug === s || o.name.toLowerCase() === s);
+}
+
+export type Dest = { slug: string; city: string; intl: boolean };
+
+const d = (slug: string, city: string, intl = true): Dest => ({ slug, city, intl });
+
+// Destinations the scraper prices. Used for links, the footer and search boxes; prices come from the database.
+export const DESTINATIONS: Dest[] = [
+  d("colombo", "Colombo"), d("kathmandu", "Kathmandu"), d("singapore", "Singapore"), d("bangkok", "Bangkok"),
+  d("kuala-lumpur", "Kuala Lumpur"), d("phuket", "Phuket"), d("ho-chi-minh-city", "Ho Chi Minh City"),
+  d("maldives", "Maldives"), d("bali", "Bali"), d("hanoi", "Hanoi"), d("dubai", "Dubai"), d("abu-dhabi", "Abu Dhabi"),
+  d("milan", "Milan"), d("zurich", "Zurich"), d("mauritius", "Mauritius"), d("tokyo", "Tokyo"), d("rome", "Rome"),
+  d("paris", "Paris"), d("london", "London"), d("osaka", "Osaka"), d("munich", "Munich"), d("amsterdam", "Amsterdam"),
+  d("reunion", "Réunion"),
+  d("mumbai", "Mumbai", false), d("delhi", "Delhi", false), d("chennai", "Chennai", false), d("kolkata", "Kolkata", false),
 ];
 
-export const MONTHS = ["2026-11", "2026-12", "2027-01", "2027-02", "2027-03"];
+/** One priced round trip for an origin. Short keys keep the payload small. */
+export type Row = {
+  id: string;
+  d: string; // destination slug
+  city: string;
+  code: string;
+  country: string;
+  intl: boolean;
+  dep: string; // YYYY-MM-DD
+  ret: string;
+  month: string; // YYYY-MM
+  nights: number;
+  price: number;
+  airline: string;
+  stops: number | null; // null = unknown, never assume direct
+  mins: number | null; // outbound duration
+  seen: string; // when the fare was observed
+};
+
+/** The cheapest fare (and the average) for one origin to one destination. */
+export type Route = {
+  o: string; // origin slug
+  d: string;
+  city: string;
+  code: string;
+  country: string;
+  intl: boolean;
+  price: number;
+  avg: number;
+  n: number;
+  nights: number;
+  dep: string;
+  ret: string;
+  month: string;
+  airline: string;
+  stops: number | null;
+  mins: number | null;
+  seen: string;
+};
+
+export const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function monthLabel(m: string) {
   const [y, mo] = m.split("-").map(Number);
-  return new Date(y, mo - 1, 1).toLocaleString("en-IN", { month: "short", year: "numeric" });
+  return mo >= 1 && mo <= 12 ? `${MON[mo - 1]} ${y}` : m;
 }
 
-export const inr = (n: number) => "₹" + n.toLocaleString("en-IN");
+const parts = (iso: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? "");
+  return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null;
+};
 
-const g = (a: string, b: string) => `linear-gradient(135deg, ${a}, ${b})`;
+/** "3 – 9 Nov 2026", collapsing month and year when shared. */
+export function formatRange(from: string, to: string) {
+  const a = parts(from), b = parts(to);
+  if (!a || !b) return from;
+  if (a.y === b.y && a.m === b.m) return `${a.d} – ${b.d} ${MON[a.m]} ${a.y}`;
+  if (a.y === b.y) return `${a.d} ${MON[a.m]} – ${b.d} ${MON[b.m]} ${a.y}`;
+  return `${a.d} ${MON[a.m]} ${a.y} – ${b.d} ${MON[b.m]} ${b.y}`;
+}
 
-const INTL: Fare[] = [
-  { code: "CMB", city: "Colombo", country: "Sri Lanka", airline: "SriLankan", stops: 0, hours: 1.5, nights: 5, price: 21114, month: "2027-02", gradient: g("#8b1d24", "#e06b5a") },
-  { code: "KUL", city: "Kuala Lumpur", country: "Malaysia", airline: "AirAsia", stops: 0, hours: 4.5, nights: 5, price: 23840, month: "2026-12", gradient: g("#0f172a", "#8b1d24") },
-  { code: "BKK", city: "Bangkok", country: "Thailand", airline: "Thai Lion Air", stops: 0, hours: 3.8, nights: 5, price: 24960, month: "2027-01", gradient: g("#6b141a", "#f8a49d") },
-  { code: "SIN", city: "Singapore", country: "Singapore", airline: "Scoot", stops: 0, hours: 4.5, nights: 5, price: 26420, month: "2027-03", gradient: g("#371210", "#d33a3c") },
-  { code: "HKT", city: "Phuket", country: "Thailand", airline: "IndiGo", stops: 1, hours: 7.2, nights: 5, price: 27150, month: "2026-11", gradient: g("#aa3438", "#fed2cd") },
-  { code: "DPS", city: "Bali", country: "Indonesia", airline: "Batik Air", stops: 1, hours: 9.4, nights: 7, price: 31900, month: "2027-02", gradient: g("#431614", "#e66e68") },
-  { code: "SGN", city: "Ho Chi Minh City", country: "Vietnam", airline: "VietJet", stops: 0, hours: 5, nights: 5, price: 29780, month: "2027-01", gradient: g("#8c0010", "#f8a49d") },
-  { code: "DXB", city: "Dubai", country: "UAE", airline: "Emirates", stops: 0, hours: 3.8, nights: 5, price: 33250, month: "2026-12", gradient: g("#0f172a", "#c53637") },
-  { code: "AUH", city: "Abu Dhabi", country: "UAE", airline: "Etihad", stops: 0, hours: 3.9, nights: 5, price: 34100, month: "2027-03", gradient: g("#371210", "#e06b5a") },
-  { code: "HAN", city: "Hanoi", country: "Vietnam", airline: "VietJet", stops: 1, hours: 8.1, nights: 7, price: 35600, month: "2027-02", gradient: g("#6b141a", "#d33a3c") },
-  { code: "MLE", city: "Maldives", country: "Maldives", airline: "IndiGo", stops: 0, hours: 2.3, nights: 3, price: 36800, month: "2026-11", gradient: g("#8b1d24", "#fdf2f2") },
-  { code: "HKG", city: "Hong Kong", country: "Hong Kong", airline: "Cathay Pacific", stops: 1, hours: 8.6, nights: 5, price: 41200, month: "2027-01", gradient: g("#040609", "#8b1d24") },
-  { code: "NRT", city: "Tokyo", country: "Japan", airline: "Singapore Airlines", stops: 1, hours: 13.5, nights: 7, price: 58900, month: "2027-03", gradient: g("#040609", "#d33a3c") },
-  { code: "LHR", city: "London", country: "United Kingdom", airline: "British Airways", stops: 0, hours: 10.2, nights: 7, price: 64300, month: "2027-02", gradient: g("#0f172a", "#aa3438") },
-  { code: "CDG", city: "Paris", country: "France", airline: "Air France", stops: 1, hours: 12.8, nights: 7, price: 67450, month: "2026-12", gradient: g("#431614", "#f8a49d") },
-  { code: "RUN", city: "Réunion", country: "France", airline: "Air Austral", stops: 1, hours: 14, nights: 7, price: 210781, month: "2027-01", gradient: g("#371210", "#fed2cd") },
+/** "19 Nov 2026", read in UTC so server and browser always agree. */
+export function formatDay(iso: string) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "";
+  const x = new Date(t);
+  return `${x.getUTCDate()} ${MON[x.getUTCMonth()]} ${x.getUTCFullYear()}`;
+}
+
+export function formatDuration(mins: number | null) {
+  if (mins === null || !Number.isFinite(mins) || mins <= 0) return null;
+  const h = Math.floor(mins / 60), m = Math.round(mins % 60);
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+export function formatStops(stops: number | null) {
+  if (stops === null || stops < 0) return null;
+  return stops === 0 ? "Direct" : stops === 1 ? "1 stop" : `${stops} stops`;
+}
+
+/** % the cheapest fare sits below the average of every date we priced for that route. */
+export const savingPct = (r: { price: number; avg: number }) => Math.max(0, Math.round((1 - r.price / r.avg) * 100));
+
+const GRADS = [
+  ["#8b1d24", "#e06b5a"], ["#0f172a", "#8b1d24"], ["#6b141a", "#f8a49d"], ["#371210", "#d33a3c"],
+  ["#aa3438", "#fed2cd"], ["#431614", "#e66e68"], ["#8c0010", "#f8a49d"], ["#040609", "#aa3438"],
 ];
-
-const DOMESTIC: Fare[] = [
-  { code: "GOI", city: "Goa", country: "India", airline: "IndiGo", stops: 0, hours: 1.2, nights: 3, price: 3890, month: "2026-12", gradient: g("#8b1d24", "#f8a49d"), intl: false },
-  { code: "DEL", city: "Delhi", country: "India", airline: "Air India", stops: 0, hours: 2.8, nights: 3, price: 5240, month: "2027-01", gradient: g("#0f172a", "#8b1d24"), intl: false },
-  { code: "BOM", city: "Mumbai", country: "India", airline: "Akasa Air", stops: 0, hours: 1.8, nights: 3, price: 4120, month: "2027-02", gradient: g("#371210", "#e06b5a"), intl: false },
-];
-
-export const FARES: Fare[] = [...INTL.map((f) => ({ ...f, intl: true })), ...DOMESTIC];
-
-export function dateRange(month: string, nights: number, seed: string) {
-  const [y, mo] = month.split("-").map(Number);
-  const day = 4 + ((seed.charCodeAt(0) + seed.charCodeAt(1)) % 17);
-  const a = new Date(y, mo - 1, day);
-  const b = new Date(y, mo - 1, day + nights);
-  const f = (d: Date) => d.toLocaleString("en-IN", { day: "numeric", month: "short" });
-  return `${f(a)} – ${f(b)}`;
+export function gradientFor(slug: string) {
+  let h = 0;
+  for (const c of slug) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const [a, b] = GRADS[h % GRADS.length];
+  return `linear-gradient(135deg, ${a}, ${b})`;
 }
 
-export function fareFor(f: Fare, month: string | null, nights: number | null) {
-  // Deterministic indicative adjustment so month/trip-length chips feel live until real data exists.
-  let p = f.price;
-  if (month && month !== f.month) p = Math.round((p * (1 + (MONTHS.indexOf(month) % 3) * 0.06 + 0.04)) / 10) * 10;
-  if (nights && nights !== f.nights) p = Math.round((p * (1 + Math.abs(nights - f.nights) * 0.015)) / 10) * 10;
-  const m = month ?? f.month;
-  return { ...f, price: p, nights: nights ?? f.nights, dates: dateRange(m, nights ?? f.nights, f.code) };
-}
+export const destName = (slug: string) => DESTINATIONS.find((x) => x.slug === slug)?.city ?? slug;
+export const resolveDest = (v: string | undefined, rows: { d: string; code: string }[]) => {
+  const s = v?.trim().toLowerCase();
+  if (!s) return "";
+  return rows.find((r) => r.d === s || r.code.toLowerCase() === s)?.d ?? "";
+};
