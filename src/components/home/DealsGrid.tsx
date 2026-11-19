@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { ORIGINS, type Route, formatDuration, formatStops, gradientFor, inr, monthLabel, savingPct } from "@/lib/fares";
 
 export default function DealsGrid({ routes }: { routes: Route[] }) {
   const have = ORIGINS.filter((o) => routes.some((r) => r.o === o.slug));
-  const [origin, setOrigin] = useState(have[0]?.slug ?? ORIGINS[0].slug);
+  const { origin: near } = useHomeOrigin();
+  const [picked, setOrigin] = useState<string | null>(null);
+  const origin = picked ?? (near && have.some((o) => o.slug === near) ? near : have[0]?.slug) ?? ORIGINS[0].slug;
   const [intl, setIntl] = useState(true);
   const deals = routes.filter((r) => r.o === origin && r.intl === intl).sort((a, b) => a.price - b.price).slice(0, 6);
 

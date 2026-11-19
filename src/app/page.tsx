@@ -44,7 +44,7 @@ const faqs = [
 const graph = {
   "@context": "https://schema.org",
   "@graph": [
-    { "@type": "Organization", "@id": `${SITE_URL}/#org`, name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/flight-klub.svg`, email: EMAIL, telephone: PHONE_TEL, contactPoint: { "@type": "ContactPoint", telephone: PHONE_TEL, email: EMAIL, contactType: "customer support", areaServed: "IN", availableLanguage: ["en", "hi"] } },
+    { "@type": "Organization", "@id": `${SITE_URL}/#org`, name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/flight-klub.svg`, email: EMAIL, telephone: PHONE_TEL, address: { "@type": "PostalAddress", streetAddress: "Tejas Arcade, 527/B, Dr Rajkumar Rd, A Block, Milk Colony, 2nd Stage, Rajajinagar", addressLocality: "Bengaluru", addressRegion: "Karnataka", postalCode: "560010", addressCountry: "IN" }, contactPoint: { "@type": "ContactPoint", telephone: PHONE_TEL, email: EMAIL, contactType: "customer support", areaServed: "IN", availableLanguage: ["en", "hi"] } },
     {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,

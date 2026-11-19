@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { WHATSAPP_URL } from "@/lib/site";
+
 
 export default function HeaderActions() {
   const { ready, user, alerts, logout } = useAuth();
@@ -11,10 +11,8 @@ export default function HeaderActions() {
 
   return (
     <nav className="font-label flex items-center gap-3 text-sm font-medium text-muted-foreground sm:gap-5">
-      <Link href="/flight-finder" className="hidden hover:text-primary sm:inline">Flights</Link>
-      <Link href="/flight-finder#months" className="hidden hover:text-primary sm:inline">Months</Link>
+      <Link href="/flight-finder" className="hidden hover:text-primary sm:inline">Flight deals</Link>
       <Link href="/blog" className="hidden hover:text-primary sm:inline">Blog</Link>
-      <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="hidden hover:text-primary md:inline">WhatsApp</a>
 
       {!ready ? (
         <span className="h-10 w-28" aria-hidden />
@@ -45,7 +43,7 @@ export default function HeaderActions() {
       ) : (
         <>
           <Link href="/login" className="rounded-full px-3 py-2 text-foreground hover:text-primary">Log in</Link>
-          <Link href="/signup" className="rounded-full bg-primary px-4 py-2 text-primary-foreground transition hover:opacity-90">Join · ₹399/yr</Link>
+          <Link href="/signup" className="rounded-full bg-primary px-4 py-2 text-primary-foreground transition hover:opacity-90">Sign up</Link>
         </>
       )}
     </nav>

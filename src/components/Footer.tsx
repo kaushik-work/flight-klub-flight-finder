@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { DESTINATIONS, ORIGINS } from "@/lib/fares";
 import { getDestinations } from "@/lib/flight-fares/store";
-import { EMAIL, PHONE_DISPLAY, PHONE_TEL, WHATSAPP_URL } from "@/lib/site";
+import { ADDRESS, EMAIL, GSTIN, INSTAGRAM_URL, PHONE_DISPLAY, PHONE_TEL, WHATSAPP_URL } from "@/lib/site";
 
 const head = "font-label text-xs font-semibold uppercase tracking-wider text-white";
 const link = "text-[#88909c] transition hover:text-white";
@@ -26,7 +26,13 @@ export default async function Footer() {
             <li><a href={`mailto:${EMAIL}`} className={link}>{EMAIL}</a></li>
             <li><Link href="/blog" className={link}>Blog</Link></li>
             <li><a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className={link}>Chat on WhatsApp</a></li>
+            <li><a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className={link}>Instagram</a></li>
           </ul>
+          <address className="mt-5 max-w-xs not-italic text-[#88909c]">
+            <span className="font-label block text-xs font-semibold uppercase tracking-wider text-white">Office</span>
+            <span className="mt-2 block">{ADDRESS}</span>
+            <span className="mt-2 block">GSTIN: {GSTIN}</span>
+          </address>
         </div>
 
         <nav aria-label="Flights by city">
@@ -69,7 +75,7 @@ export default async function Footer() {
         </nav>
       </div>
       <div className="border-t border-white/10">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-[#88909c]">© 2026 Flight Klub</p>
+        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-[#88909c]">© 2026 Flight Klub · GSTIN {GSTIN}</p>
       </div>
     </footer>
   );

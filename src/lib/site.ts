@@ -5,6 +5,9 @@ export const PHONE_DISPLAY = "+91 87229 36433";
 export const PHONE_TEL = "+918722936433";
 export const WHATSAPP_URL = "https://wa.me/918722936433?text=" + encodeURIComponent("Hi Flight Klub, I need help with a flight.");
 export const EMAIL = "contact@flightklub.com";
+export const ADDRESS = "Tejas Arcade, 527/B, Dr Rajkumar Rd, A Block, Milk Colony, 2nd Stage, Rajajinagar, Bengaluru, Karnataka 560010";
+export const GSTIN = "29AAZFT2848L1Z1";
+export const INSTAGRAM_URL = "https://www.instagram.com/flight_klub_/";
 export const SITE_DESC =
   "Find the cheapest destinations and the cheapest months to fly from Bangalore, Delhi, Mumbai and more. Compare round-trip fares in rupees and plan your trip around the best price.";
 

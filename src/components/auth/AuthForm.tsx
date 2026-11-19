@@ -245,7 +245,7 @@ export default function AuthForm({ mode, next }: { mode: Mode; next: string }) {
               <p className="mt-8 text-center text-sm text-muted-foreground">
                 {signup ? "Already have an account? " : "New to Flight Klub? "}
                 <Link href={`${signup ? "/login" : "/signup"}?next=${encodeURIComponent(next)}`} className="font-bold text-primary hover:underline">
-                  {signup ? "Log in" : "Become a member"}
+                  {signup ? "Log in" : "Sign up"}
                 </Link>
               </p>
             </>

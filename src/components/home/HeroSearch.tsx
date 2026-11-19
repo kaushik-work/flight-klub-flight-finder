@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { DESTINATIONS, ORIGINS } from "@/lib/fares";
 
 const field =
@@ -9,12 +10,15 @@ const field =
 
 export default function HeroSearch() {
   const router = useRouter();
-  const [from, setFrom] = useState(ORIGINS[0].slug);
+  const { origin: near, setUserOrigin } = useHomeOrigin();
+  const [picked, setFrom] = useState<string | null>(null);
+  const from = picked ?? near ?? ORIGINS[0].slug;
   const [to, setTo] = useState("");
   const [nights, setNights] = useState<number | null>(null);
 
   function go(e: React.FormEvent) {
     e.preventDefault();
+    setUserOrigin(from);
     const q = new URLSearchParams({ from });
     if (to) q.set("to", to);
     if (nights) q.set("nights", String(nights));
