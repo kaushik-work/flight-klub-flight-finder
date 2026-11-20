@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import AuthForm from "@/components/auth/AuthForm";
+import { pickSample } from "@/components/auth/sample";
 import Header from "@/components/Header";
+import { getRoutes } from "@/lib/flight-fares/store";
 
 export const metadata: Metadata = {
   title: "Sign up",
@@ -11,7 +13,8 @@ export const metadata: Metadata = {
 async function Form({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
   const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "/flight-finder";
-  return <AuthForm mode="signup" next={safe} />;
+  const sample = pickSample(await getRoutes());
+  return <AuthForm mode="signup" next={safe} sample={sample} />;
 }
 
 export default function Page({ searchParams }: { searchParams: Promise<{ next?: string }> }) {

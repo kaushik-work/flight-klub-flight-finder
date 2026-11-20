@@ -19,6 +19,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-price: #15803d;
+  --color-price-soft: #dcfce7;
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -28,7 +30,8 @@
   --color-border: var(--border);
   --color-ring: var(--ring);
   --font-sans: var(--font-sans);
-  --font-label: var(--font-label);
+  --font-label: var(--font-sans);
+  --font-serif: var(--font-sans);
   --radius-lg: var(--radius);
 }
 
@@ -39,5 +42,81 @@ body {
 }
 
 .font-label {
-  font-family: var(--font-label), Arial, sans-serif;
+  font-family: var(--font-sans), Arial, sans-serif;
+}
+
+
+/* ==========================================================================
+   Flight Klub design system: one font, one shadow scale, one card shape (the ticket), one motion language.
+   Everything below is shared by every page. Change a token here and the whole site follows.
+   ========================================================================== */
+
+:root {
+  /* Shadows. Tickets use drop-shadow (not box-shadow) so the notches stay cut out. */
+  --shadow-ticket: drop-shadow(0 1px 1.5px rgb(15 23 42 / 0.10)) drop-shadow(0 10px 18px rgb(139 29 36 / 0.10));
+  --shadow-ticket-lift: drop-shadow(0 2px 3px rgb(15 23 42 / 0.12)) drop-shadow(0 22px 30px rgb(139 29 36 / 0.20));
+  --price: #15803d; /* green = below average */
+  --ease-ticket: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --perf: rgb(15 23 42 / 0.16);
+}
+
+/* --- Typography: Figtree only. Headings tight and balanced, labels spaced caps. --- */
+h1, h2, h3, h4 { letter-spacing: -0.02em; text-wrap: balance; }
+.t-display { font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+.t-title { font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
+.t-label { font-weight: 700; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; }
+.t-num { font-variant-numeric: tabular-nums; }
+
+/* --- The ticket. Outer .ticket-shell carries the shadow and the lift; inner .ticket is the paper with
+       half-circle notches cut from both sides at --y (set it where the perforation sits). --- */
+.ticket-shell {
+  filter: var(--shadow-ticket);
+  transition: transform 0.35s var(--ease-ticket), filter 0.35s var(--ease-ticket);
+}
+.ticket-shell:hover { transform: translateY(-5px); filter: var(--shadow-ticket-lift); }
+.ticket {
+  --n: 11px;
+  --y: 50%;
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+  border-radius: 1.5rem;
+  -webkit-mask:
+    radial-gradient(circle var(--n) at 0 var(--y), transparent 98%, #000) 0 0 / 51% 100% no-repeat,
+    radial-gradient(circle var(--n) at 100% var(--y), transparent 98%, #000) 100% 0 / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle var(--n) at 0 var(--y), transparent 98%, #000) 0 0 / 51% 100% no-repeat,
+    radial-gradient(circle var(--n) at 100% var(--y), transparent 98%, #000) 100% 0 / 51% 100% no-repeat;
+}
+.ticket-perf { border-top: 2px dashed var(--perf); }
+.ticket-perf-light { border-top: 2px dashed rgb(255 255 255 / 0.35); }
+
+/* --- Motion --- */
+@keyframes ticket-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+/* "backwards" (not "both") so hover transforms still work once the entrance has finished. */
+.reveal {
+  animation: ticket-in 0.6s var(--ease-ticket) backwards;
+  animation-delay: calc(min(var(--i, 0), 12) * 70ms);
+}
+.page-enter { animation: page-in 0.5s var(--ease-ticket) backwards; }
+.skeleton {
+  background: linear-gradient(100deg, #eceff3 30%, #f8f9fb 50%, #eceff3 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .page-enter, .skeleton { animation: none; }
+  .ticket-shell { transition: none; }
+  .ticket-shell:hover { transform: none; }
 }

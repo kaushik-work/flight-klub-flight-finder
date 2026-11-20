@@ -118,12 +118,14 @@ export default async function Home() {
             <h2 className={`${h2} mt-2`}>Pick your month, see the best fares</h2>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {months.map(({ month: m, from }) => (
-                <Link key={m} href={`/flight-finder?month=${m}#fares`}
-                  className="group rounded-2xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                <div key={m} className="ticket-shell reveal">
+                <Link href={`/flight-finder?month=${m}#fares`}
+                  className="ticket group block p-5" style={{ "--n": "8px", "--y": "58%" } as React.CSSProperties}>
                   <p className="font-label text-lg font-bold">{monthLabel(m)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">from {inr(from)}</p>
                   <p className="font-label mt-4 text-sm font-bold text-primary transition group-hover:translate-x-1">Explore →</p>
                 </Link>
+                </div>
               ))}
             </div>
           </div>

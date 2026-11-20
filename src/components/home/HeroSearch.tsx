@@ -14,6 +14,7 @@ export default function HeroSearch() {
   const [picked, setFrom] = useState<string | null>(null);
   const from = picked ?? near ?? ORIGINS[0].slug;
   const [to, setTo] = useState("");
+  const [intl, setIntl] = useState(true);
   const [nights, setNights] = useState<number | null>(null);
 
   function go(e: React.FormEvent) {
@@ -27,8 +28,19 @@ export default function HeroSearch() {
 
   const label = "font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
 
+  const list = DESTINATIONS.filter((f) => f.intl === intl && f.slug !== from);
+
   return (
-    <form onSubmit={go} className="grid gap-4 rounded-2xl bg-white p-4 text-foreground shadow-2xl shadow-black/30 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+    <div className="rounded-2xl bg-white p-4 text-foreground shadow-2xl shadow-black/30">
+    <div role="tablist" aria-label="Trip type" className="mb-4 inline-flex gap-1 rounded-xl border border-border bg-muted p-1">
+      {([[true, "International"], [false, "Domestic"]] as const).map(([v, t]) => (
+        <button key={t} type="button" role="tab" aria-selected={intl === v} onClick={() => { setIntl(v); setTo(""); }}
+          className={`font-label h-9 rounded-lg px-4 text-sm font-semibold transition ${intl === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          {t}
+        </button>
+      ))}
+    </div>
+    <form onSubmit={go} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
       <label className="block">
         <span className={label}>Flying from</span>
         <select className={field} value={from} onChange={(e) => setFrom(e.target.value)}>
@@ -38,8 +50,8 @@ export default function HeroSearch() {
       <label className="block">
         <span className={label}>Going to</span>
         <select className={field} value={to} onChange={(e) => setTo(e.target.value)}>
-          <option value="">Anywhere (show me the cheapest)</option>
-          {DESTINATIONS.filter((f) => f.intl).map((f) => <option key={f.slug} value={f.slug}>{f.city}</option>)}
+          <option value="">{intl ? "Anywhere abroad (show me the cheapest)" : "Anywhere in India (show me the cheapest)"}</option>
+          {list.map((f) => <option key={f.slug} value={f.slug}>{f.city}</option>)}
         </select>
       </label>
       <div>
@@ -57,5 +69,6 @@ export default function HeroSearch() {
         Find cheap flights →
       </button>
     </form>
+    </div>
   );
 }

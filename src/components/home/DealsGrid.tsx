@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
+import PriceTag from "@/components/PriceTag";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
-import { ORIGINS, type Route, formatDuration, formatStops, gradientFor, inr, monthLabel, savingPct } from "@/lib/fares";
+import { ORIGINS, type Route, formatDuration, formatStops, gradientFor, monthLabel, savingPct } from "@/lib/fares";
 
 export default function DealsGrid({ routes }: { routes: Route[] }) {
   const have = ORIGINS.filter((o) => routes.some((r) => r.o === o.slug));
@@ -39,28 +40,25 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
         <p className="mt-5 rounded-xl bg-muted p-6 text-muted-foreground">No {intl ? "international" : "domestic"} fares from this city right now.</p>
       )}
       <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {deals.map((f) => {
+        {deals.map((f, idx) => {
           const pct = savingPct(f);
           const stops = formatStops(f.stops);
           return (
-            <li key={f.d}>
-              <Link href={`/flight-finder?from=${origin}&to=${f.d}`}
-                className="group block overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+            <li key={f.d} style={{ "--i": idx } as CSSProperties} className="ticket-shell reveal">
+              <Link href={`/flight-finder?from=${origin}&to=${f.d}`} style={{ "--y": "10rem" } as CSSProperties}
+                className="ticket group block">
                 <div className="relative flex h-40 items-end justify-between p-4 text-white" style={{ background: gradientFor(f.d) }}>
                   {pct > 0 && <span className="font-label absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-bold text-primary">{pct}% below average</span>}
                   <span className="font-label text-5xl font-bold tracking-wider">{f.code}</span>
                   {stops && <span className="font-label rounded-full bg-black/40 px-3 py-1 text-xs">{stops}</span>}
                 </div>
-                <div className="p-4">
+                <div className="ticket-perf p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="text-lg font-bold">{f.city}</h3>
                       <p className="text-xs text-muted-foreground">Round trip · {f.nights}N{formatDuration(f.mins) ? ` · ${formatDuration(f.mins)}` : ""}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xl font-extrabold text-primary">{inr(f.price)}</p>
-                      {pct > 0 && <p className="text-xs text-muted-foreground">avg <span className="line-through">{inr(f.avg)}</span></p>}
-                    </div>
+                    <PriceTag price={f.price} avg={f.avg} align="right" />
                   </div>
                   <p className="font-label mt-3 flex items-center justify-between text-xs text-muted-foreground">
                     <span>Cheapest in {monthLabel(f.month)}</span>

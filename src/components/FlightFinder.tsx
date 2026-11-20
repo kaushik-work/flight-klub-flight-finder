@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import PriceTag from "@/components/PriceTag";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
@@ -105,6 +106,13 @@ export default function FlightFinder({
     );
   }, [pool, month, nights, dest, direct, sort]);
 
+  // Average fare per destination over every priced date, so a result can show how far below average it is.
+  const avgByDest = useMemo(() => {
+    const t: Record<string, { sum: number; n: number }> = {};
+    for (const r of pool) { const x = (t[r.d] ??= { sum: 0, n: 0 }); x.sum += r.price; x.n += 1; }
+    return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v.sum / v.n]));
+  }, [pool]);
+
   const lastSeen = useMemo(() => rows.reduce((m, r) => (r.seen > m ? r.seen : m), ""), [rows]);
 
   return (
@@ -203,22 +211,20 @@ export default function FlightFinder({
               const stops = formatStops(f.stops);
               const dur = formatDuration(f.mins);
               return (
-                <li key={f.d} className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+                <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal group">
+                  <div className="ticket" style={{ "--y": "9rem" } as CSSProperties}>
                   <div className="relative flex h-36 items-end justify-between p-4 text-white" style={{ background: gradientFor(f.d) }}>
                     <span className="font-label absolute left-4 top-4 rounded-full bg-black/40 px-2.5 py-1 text-xs font-semibold">#{i + 1}</span>
                     <span className="font-label text-4xl font-bold tracking-wider">{f.code}</span>
                     {stops && <span className="font-label rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">{stops}</span>}
                   </div>
-                  <div className="p-4">
+                  <div className="ticket-perf p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="text-lg font-bold leading-tight">{f.city}</h3>
                         <p className="text-xs text-muted-foreground">{f.country}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xl font-extrabold leading-tight text-primary">{inr(f.price)}</p>
-                        <p className="text-[11px] text-muted-foreground">round trip</p>
-                      </div>
+                      <PriceTag price={f.price} avg={avgByDest[f.d]} align="right" note="round trip" />
                     </div>
                     <dl className="font-label mt-4 grid grid-cols-3 gap-2 rounded-xl bg-muted p-3 text-center text-xs">
                       <div><dt className="text-muted-foreground">Flight</dt><dd className="mt-0.5 font-semibold">{dur ?? "—"}</dd></div>
@@ -246,6 +252,7 @@ export default function FlightFinder({
                         </>
                       )}
                     </div>
+                  </div>
                   </div>
                 </li>
               );
