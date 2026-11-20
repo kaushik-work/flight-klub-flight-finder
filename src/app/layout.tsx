@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
+import { Figtree } from "next/font/google";
 import { SITE_DESC, SITE_NAME, SITE_URL } from "@/lib/site";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { LocationProvider } from "@/components/location/LocationProvider";
 import "./globals.css";
 
-const sans = Plus_Jakarta_Sans({ variable: "--font-sans", subsets: ["latin"] });
-const label = Space_Grotesk({ variable: "--font-label", subsets: ["latin"] });
+const sans = Figtree({ variable: "--font-sans", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -45,7 +44,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`${sans.variable} ${label.variable} h-full antialiased`}>
+    <html lang="en-IN" className={`${sans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col"><AuthProvider><LocationProvider>{children}</LocationProvider></AuthProvider></body>
     </html>
   );

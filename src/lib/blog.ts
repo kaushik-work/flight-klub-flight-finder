@@ -33,11 +33,11 @@ export const related = (p: Post, n = 3) => {
 const title = (slug: string) =>
   slug === "reunion" ? "Réunion" : slug.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
 
-/** What to print on a post's cover, derived from its id, so no stock photo is needed. */
-export function coverOf(p: Pick<Post, "id" | "title">): { slug: string; label: string; title: string } {
+/** A short headline for tiles, derived from the id (the full title stays on the article page). */
+export function shortTitle(p: Pick<Post, "id" | "title">): string {
   const city = /^cheapest-time-to-fly-from-([a-z-]+?)-\d{4}/.exec(p.id);
-  if (city) return { slug: city[1], label: "Cheapest time to fly from", title: title(city[1]) };
+  if (city) return `Cheapest time to fly from ${title(city[1])}`;
   const dest = /^cheapest-flights-to-([a-z-]+?)-from-india/.exec(p.id);
-  if (dest) return { slug: dest[1], label: "Cheapest flights to", title: title(dest[1]) };
-  return { slug: p.id, label: "Fare guide", title: p.title.replace(/\s*\(.*$/, "").split(":")[0] };
+  if (dest) return `Cheapest flights to ${title(dest[1])}`;
+  return p.title.replace(/\s*\(.*$/, "").split(":")[0];
 }

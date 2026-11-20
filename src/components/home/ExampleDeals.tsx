@@ -1,4 +1,6 @@
 import Link from "next/link";
+import PriceTag from "@/components/PriceTag";
+import type { CSSProperties } from "react";
 import { ORIGINS, type Route, formatRange, formatStops, gradientFor, inr, monthLabel, savingPct } from "@/lib/fares";
 
 // Examples built from the real fares we hold. No member names or quotes: nothing here is a real person's claim.
@@ -23,11 +25,12 @@ export default function ExampleDeals({ routes }: { routes: Route[] }) {
       </p>
 
       <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {deals.map(({ r, from }) => {
+        {deals.map(({ r, from }, idx) => {
           const pct = savingPct(r);
           const stops = formatStops(r.stops);
           return (
-            <li key={`${r.o}-${r.d}`} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <li key={`${r.o}-${r.d}`} style={{ "--i": idx } as CSSProperties} className="ticket-shell reveal">
+              <div className="ticket" style={{ "--y": "9rem" } as CSSProperties}>
               <div className="relative flex h-36 items-end justify-between p-4 text-white" style={{ background: gradientFor(r.d) }}>
                 {pct > 0 && <span className="font-label absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-bold text-primary">{pct}% off avg</span>}
                 <span className="font-label absolute right-4 top-4 rounded-full bg-black/40 px-3 py-1 text-xs">Round trip</span>
@@ -37,14 +40,11 @@ export default function ExampleDeals({ routes }: { routes: Route[] }) {
                 </div>
                 <span className="font-label text-3xl font-bold tracking-wider opacity-90">{r.code}</span>
               </div>
-              <div className="p-4">
+              <div className="ticket-perf p-4">
                 <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-2xl font-extrabold text-primary">{inr(r.price)}</p>
-                    {pct > 0 && <p className="text-xs text-muted-foreground">route average <span className="line-through">{inr(r.avg)}</span></p>}
-                  </div>
+                  <PriceTag price={r.price} avg={r.avg} size="lg" />
                   {r.avg > r.price && (
-                    <p className="font-label rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground">Save {inr(r.avg - r.price)}</p>
+                    <p className="font-label rounded-lg bg-price-soft px-3 py-1.5 text-xs font-bold text-price">Save {inr(r.avg - r.price)}</p>
                   )}
                 </div>
                 <p className="font-label mt-3 text-xs text-muted-foreground">
@@ -54,6 +54,7 @@ export default function ExampleDeals({ routes }: { routes: Route[] }) {
                   <span className="font-label select-none text-xs blur-[5px]" aria-hidden>{formatRange(r.dep, r.ret)}</span>
                   <span className="font-label text-xs font-semibold text-muted-foreground">🔒 Dates for members</span>
                 </div>
+              </div>
               </div>
             </li>
           );

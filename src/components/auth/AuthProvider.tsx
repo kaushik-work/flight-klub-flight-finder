@@ -1,9 +1,11 @@
 "use client";
 
-// UI-only auth: the "session" lives in localStorage. Replace with real auth (e.g. Firebase) later.
+// Sign-in is verified by Firebase (Google + SMS code). The profile and membership mirror lives in localStorage until
+// a server session (Firebase Admin + httpOnly cookie) replaces it.
+import { firebaseAuth } from "@/lib/firebase/client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type User = { name: string; phone: string; city: string; renews?: string };
+export type User = { name: string; phone: string; city: string; email?: string; renews?: string };
 
 type Ctx = {
   ready: boolean;
@@ -31,6 +33,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAlerts(Array.isArray(s.alerts) ? s.alerts : []);
       }
     } catch {}
+    // If the server says the cookie is gone or expired, drop the local copy too (a 503 means server auth is off).
+    fetch("/api/session").then((r) => { if (r.status === 401) { setUser(null); setAlerts([]); try { localStorage.removeItem(KEY); } catch {} } }).catch(() => {});
     setReady(true);
   }, []);
 
@@ -42,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = useCallback((u: User) => { setUser(u); save(u, alerts); }, [alerts]);
-  const logout = useCallback(() => { setUser(null); setAlerts([]); save(null, []); }, []);
+  const logout = useCallback(() => { void fetch("/api/session", { method: "DELETE" }).catch(() => {}); void firebaseAuth().signOut().catch(() => {}); setUser(null); setAlerts([]); save(null, []); }, []);
   const toggleAlert = useCallback((code: string) => {
     setAlerts((prev) => {
       const next = prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code];

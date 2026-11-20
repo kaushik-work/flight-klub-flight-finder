@@ -1,18 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 
+const on = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
+
 export default function HeaderActions() {
+  const path = usePathname() ?? "";
   const { ready, user, alerts, logout } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
     <nav className="font-label flex items-center gap-3 text-sm font-medium text-muted-foreground sm:gap-5">
-      <Link href="/flight-finder" className="hidden hover:text-primary sm:inline">Flight deals</Link>
-      <Link href="/blog" className="hidden hover:text-primary sm:inline">Blog</Link>
+      {[["/flight-finder", "Flight deals"], ["/blog", "Blog"]].map(([href, text]) => (
+        <Link key={href} href={href} aria-current={on(path, href) ? "page" : undefined}
+          className={`relative hidden py-2 transition sm:inline ${on(path, href) ? "font-semibold text-primary after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-primary" : "hover:text-primary"}`}>
+          {text}
+        </Link>
+      ))}
 
       {!ready ? (
         <span className="h-10 w-28" aria-hidden />
@@ -42,8 +50,10 @@ export default function HeaderActions() {
         </div>
       ) : (
         <>
-          <Link href="/login" className="rounded-full px-3 py-2 text-foreground hover:text-primary">Log in</Link>
-          <Link href="/signup" className="rounded-full bg-primary px-4 py-2 text-primary-foreground transition hover:opacity-90">Sign up</Link>
+          <Link href="/login" aria-current={on(path, "/login") ? "page" : undefined}
+            className={`rounded-full px-4 py-2 transition ${on(path, "/login") ? "bg-secondary font-semibold text-primary ring-1 ring-primary/30" : "text-foreground hover:text-primary"}`}>Log in</Link>
+          <Link href="/signup" aria-current={on(path, "/signup") ? "page" : undefined}
+            className={`rounded-full bg-primary px-4 py-2 text-primary-foreground transition hover:opacity-90 ${on(path, "/signup") ? "ring-4 ring-primary/25" : ""}`}>Sign up</Link>
         </>
       )}
     </nav>

@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import { type NextRequest } from "next/server";
 import { FARES_COLLECTION, getFaresDb } from "@/lib/flight-fares/store";
@@ -23,10 +24,40 @@ const usable = (f: Fare) =>
   Number.isFinite(f.price) &&
   f.price > 0;
 
+const MAX_BODY_BYTES = 25 * 1024 * 1024;
+const MAX_FARES = 20000;
+
+// Constant-time comparison (hashing first makes the lengths equal), so response timing never leaks the secret.
+function secretMatches(given: string | null): boolean {
+  const expected = process.env.FARE_INGEST_SECRET;
+  if (!expected || !given) return false;
+  const a = createHash("sha256").update(given).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
+// Slows password guessing: 10 bad secrets per IP per 15 minutes. In memory, so it is per server instance.
+const strikes = new Map<string, { n: number; reset: number }>();
+function blocked(ip: string): boolean {
+  const s = strikes.get(ip);
+  return !!s && s.reset > Date.now() && s.n >= 10;
+}
+function strike(ip: string) {
+  const now = Date.now();
+  const s = strikes.get(ip);
+  if (!s || s.reset <= now) strikes.set(ip, { n: 1, reset: now + 15 * 60 * 1000 });
+  else s.n += 1;
+}
+
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get("x-fare-secret");
-  if (!process.env.FARE_INGEST_SECRET || secret !== process.env.FARE_INGEST_SECRET) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+  if (blocked(ip)) return Response.json({ success: false, error: "Too many attempts" }, { status: 429 });
+  if (!secretMatches(request.headers.get("x-fare-secret"))) {
+    strike(ip);
     return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
+    return Response.json({ success: false, error: "Payload too large" }, { status: 413 });
   }
 
   let body: { originSlug?: unknown; fares?: unknown; allowShrink?: unknown };
@@ -38,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   const originSlug = typeof body.originSlug === "string" ? body.originSlug : null;
   const submitted = Array.isArray(body.fares) ? (body.fares as Fare[]) : null;
-  if (!originSlug || !submitted) {
+  if (!originSlug || !/^[a-z0-9-]{1,40}$/.test(originSlug) || !submitted || submitted.length > MAX_FARES) {
     return Response.json({ success: false, error: "originSlug and fares[] are required" }, { status: 400 });
   }
 
@@ -70,6 +101,7 @@ export async function POST(request: NextRequest) {
     revalidateTag("flight-fares", { expire: 0 });
     return Response.json({ success: true, stored: rows.length, skipped: submitted.length - fares.length });
   } catch (error) {
-    return Response.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    console.error("flight-fares ingest failed", error);
+    return Response.json({ success: false, error: "Could not store fares" }, { status: 500 });
   }
 }
