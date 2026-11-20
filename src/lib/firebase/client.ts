@@ -1,6 +1,7 @@
 "use client";
 
-import { getApp, getApps, initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { getAuth } from "firebase/auth";
 
 // These are public identifiers, not secrets. Access is controlled by Firebase Auth rules and authorized domains.
@@ -11,9 +12,27 @@ const config = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// reCAPTCHA Enterprise site key for App Check (public). Leave unset and App Check stays off.
+const appCheckKey = process.env.NEXT_PUBLIC_FIREBASE_APPCHECK_KEY;
+
+// Starts the app once, with App Check attached before any Firebase service is used.
+function firebaseApp(): FirebaseApp {
+  if (getApps().length) return getApp();
+  const app = initializeApp(config);
+  if (typeof window !== "undefined" && appCheckKey) {
+    if (process.env.NODE_ENV !== "production") {
+      // Development only: the SDK prints a debug token in the console. Register it under
+      // App Check -> Manage debug tokens so localhost passes. Never set this in production.
+      (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean | string }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+        process.env.NEXT_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN || true;
+    }
+    initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(appCheckKey), isTokenAutoRefreshEnabled: true });
+  }
+  return app;
+}
+
 export function firebaseAuth() {
-  const app = getApps().length ? getApp() : initializeApp(config);
-  const auth = getAuth(app);
+  const auth = getAuth(firebaseApp());
   auth.languageCode = "en";
   return auth;
 }
