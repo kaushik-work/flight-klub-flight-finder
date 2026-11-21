@@ -5,13 +5,14 @@
 import { firebaseAuth } from "@/lib/firebase/client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type User = { name: string; phone: string; city: string; email?: string; renews?: string };
+export type User = { name: string; phone: string; city: string; email?: string; since?: string; renews?: string };
 
 type Ctx = {
   ready: boolean;
   user: User | null;
   alerts: string[];
   login: (u: User) => void;
+  updateUser: (patch: Partial<Pick<User, "name" | "city" | "email">>) => void;
   logout: () => void;
   toggleAlert: (code: string) => void;
 };
@@ -46,6 +47,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = useCallback((u: User) => { setUser(u); save(u, alerts); }, [alerts]);
+  const updateUser = useCallback((patch: Partial<Pick<User, "name" | "city" | "email">>) => {
+    if (!user) return;
+    const next = { ...user, ...patch };
+    setUser(next);
+    save(next, alerts);
+  }, [user, alerts]);
   const logout = useCallback(() => { void fetch("/api/session", { method: "DELETE" }).catch(() => {}); void firebaseAuth().signOut().catch(() => {}); setUser(null); setAlerts([]); save(null, []); }, []);
   const toggleAlert = useCallback((code: string) => {
     setAlerts((prev) => {
@@ -55,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [user]);
 
-  const value = useMemo(() => ({ ready, user, alerts, login, logout, toggleAlert }), [ready, user, alerts, login, logout, toggleAlert]);
+  const value = useMemo(() => ({ ready, user, alerts, login, updateUser, logout, toggleAlert }), [ready, user, alerts, login, updateUser, logout, toggleAlert]);
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 

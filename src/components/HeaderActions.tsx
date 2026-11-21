@@ -46,7 +46,8 @@ export default function HeaderActions() {
                   <p className="text-xs text-muted-foreground">{user.phone ? `+91 ${user.phone}` : "Signed in with Google"} · {user.city}</p>
                   {user.renews && <p className="font-label mt-1 text-xs font-semibold text-primary">Member · valid till {new Date(user.renews).toLocaleString("en-IN", { month: "short", year: "numeric" })}</p>}
                 </div>
-                <Link role="menuitem" href="/flight-finder" onClick={() => setOpen(false)} className="mt-1 flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted">
+                <Link role="menuitem" href="/account" onClick={() => setOpen(false)} className="mt-1 block rounded-lg px-3 py-2 font-semibold hover:bg-muted">My account</Link>
+                <Link role="menuitem" href="/flight-finder" onClick={() => setOpen(false)} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted">
                   Price alerts <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">{alerts.length}</span>
                 </Link>
                 <button role="menuitem" onClick={() => { logout(); setOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted">Log out</button>

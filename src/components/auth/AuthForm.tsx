@@ -210,7 +210,7 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
     setTimeout(() => {
       setBusy(false);
       const renews = new Date(); renews.setFullYear(renews.getFullYear() + 1);
-      login({ name: name.trim() || "Member", phone, city, email: google?.email, renews: renews.toISOString() });
+      login({ name: name.trim() || "Member", phone, city, email: google?.email, since: new Date().toISOString(), renews: renews.toISOString() });
       setStep("done");
       setTimeout(() => router.push(next), 1100);
     }, 900);
