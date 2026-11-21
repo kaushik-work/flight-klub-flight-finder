@@ -86,12 +86,32 @@ async function loadMonths(): Promise<{ month: string; from: number }[]> {
   return out.map((m) => ({ month: m._id as string, from: m.from as number }));
 }
 
+async function loadNights(): Promise<number[]> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 86400 });
+  cacheTag("flight-fares");
+  const out = await (await getFaresDb()).collection(COLLECTION).aggregate([
+    { $match: { price: { $gt: 0 } } },
+    { $group: { _id: "$nights", n: { $sum: 1 } } },
+    { $match: { n: { $gte: 50 } } }, // a length needs real coverage before it is offered as a choice
+    { $sort: { _id: 1 } },
+  ]).toArray();
+  return out.map((g) => g._id as number).filter((n) => Number.isInteger(n) && n > 0);
+}
+
 // Public wrappers: a database blip must not 500 a page, so failures become "no fares right now".
 export async function getOriginRows(origin: string): Promise<Row[]> {
   try { return await loadOrigin(origin); } catch { return []; }
 }
 export async function getRoutes(): Promise<Route[]> {
   try { return await loadRoutes(); } catch { return []; }
+}
+/** Trip lengths (in nights) we really hold fares for, so 4N and 6N appear by themselves once the scraper has collected them. */
+export async function getNightOptions(): Promise<number[]> {
+  try {
+    const n = await loadNights();
+    return n.length ? n : [3, 5, 7];
+  } catch { return [3, 5, 7]; }
 }
 export async function getMonthMins(): Promise<{ month: string; from: number }[]> {
   try { return await loadMonths(); } catch { return []; }

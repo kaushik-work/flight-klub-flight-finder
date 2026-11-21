@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, ArrowUpRight, Bell, BellOn, Lock } from "@/components/Icons";
 import PriceMeter from "@/components/PriceMeter";
-import PriceTag, { DropIcon } from "@/components/PriceTag";
+import PriceTag from "@/components/PriceTag";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
-  ORIGINS, type Origin, type Row, formatDay, formatDuration, formatRange, formatStops, inr, monthLabel,
+  ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, inr, monthLabel,
 } from "@/lib/fares";
 
 const seg = (on: boolean) =>
@@ -200,11 +201,11 @@ export default function FlightFinder({
           <p className="text-sm text-muted-foreground">{results.length} destinations</p>
           {ready && !user && (
             <Link href="/signup?next=/flight-finder" className="font-label flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground transition hover:bg-primary hover:text-primary-foreground">
-              🔒 Members unlock exact dates and price-drop alerts · ₹399/year →
+              <Lock className="mr-1.5" />Members unlock exact dates and price-drop alerts · ₹399/year<ArrowRight className="ml-1.5" />
             </Link>
           )}
           {user && alerts.length > 0 && (
-            <p className="font-label text-xs font-semibold text-primary">🔔 {alerts.length} price alert{alerts.length > 1 ? "s" : ""} on</p>
+            <p className="font-label text-xs font-semibold text-primary"><BellOn className="mr-1" />{alerts.length} price alert{alerts.length > 1 ? "s" : ""} on</p>
           )}
         </div>
 
@@ -215,81 +216,97 @@ export default function FlightFinder({
               : "No flights match these filters. Try another month or trip length."}
           </p>
         ) : (
-          <ul className={`grid gap-5 transition-opacity ${moving ? "opacity-50" : ""}`}>
+          <ul className={`grid gap-5 transition-opacity lg:grid-cols-2 ${moving ? "opacity-50" : ""}`}>
             {results.map((f, i) => {
               const stops = formatStops(f.stops);
               const dur = formatDuration(f.mins);
               const st = stats[f.d];
-              const pct = st && st.avg > f.price ? Math.round((1 - f.price / st.avg) * 100) : 0;
               return (
                 <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal">
-                  <div className="ticket ticket-pass md:flex">
+                  <div className="ticket ticket-pass md:flex lg:block">
                     <div className="min-w-0 flex-1 p-5 md:p-6">
                       <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
                         {f.d === cheapestId && results.length > 1 && <span className="rounded-full bg-price px-2.5 py-1 text-white">Cheapest</span>}
                         {f.d === fastestId && <span className="rounded-full bg-[#e4e9f2] px-2.5 py-1 text-[#1f2a44]">Fastest</span>}
                         {f.stops === 0 && <span className="rounded-full bg-price-soft px-2.5 py-1 text-price">Direct</span>}
-                        {pct > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-price-soft px-2.5 py-1 text-price"><DropIcon className="h-3 w-3" />{pct}% below average</span>}
                       </div>
 
+                      {/* Where: source and destination are the loudest thing after the price. */}
                       <div className="mt-4 flex items-center gap-3">
                         <div className="min-w-0">
-                          <p className="font-label text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">From</p>
-                          <p className="t-title truncate text-xl sm:text-2xl">{origin.name}</p>
+                          <p className="font-label text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">From</p>
+                          <p className="t-title truncate text-2xl sm:text-3xl">{origin.name}</p>
                         </div>
                         <div className="flex min-w-0 flex-1 flex-col items-center text-[11px] font-medium text-muted-foreground" aria-hidden>
-                          <span>{[dur, stops && f.stops !== 0 ? stops : null].filter(Boolean).join(" · ") || "Round trip"}</span>
+                          <span>{dur ?? "Round trip"}</span>
                           <span className="flex w-full items-center gap-1 text-muted-foreground/50">
                             <span className="h-1.5 w-1.5 rounded-full border border-current" />
                             <span className="h-px flex-1 border-t border-dashed border-current" />
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" transform="rotate(90 12 12)" /></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" transform="rotate(90 12 12)" /></svg>
                             <span className="h-px flex-1 border-t border-dashed border-current" />
                             <span className="h-1.5 w-1.5 rounded-full border border-current" />
                           </span>
-                          <span>Round trip</span>
+                          <span>{f.stops === 0 ? "Non-stop" : stops ?? "Round trip"}</span>
                         </div>
                         <div className="min-w-0 text-right">
-                          <p className="font-label text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">To · {f.code}</p>
-                          <p className="t-title truncate text-xl sm:text-2xl">{f.city}</p>
+                          <p className="font-label text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">To · {f.code}</p>
+                          <p className="t-title truncate text-2xl sm:text-3xl">{f.city}</p>
                         </div>
                       </div>
 
-                      <dl className="mt-5 grid grid-cols-3 gap-2 text-sm">
-                        {[["Trip", `${f.nights} nights`], ["Airline", f.airline || "Not listed"], ["Best month", monthLabel(f.month)]].map(([k, v]) => (
-                          <div key={k} className="min-w-0 rounded-xl bg-muted px-3 py-2.5">
-                            <dt className="text-[11px] text-muted-foreground">{k}</dt>
-                            <dd className="mt-0.5 truncate font-semibold">{v}</dd>
+                      {/* When */}
+                      <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-secondary px-4 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg>
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-muted-foreground">Travel dates · {f.nights} nights</p>
+                            {user ? (
+                              <p className="t-num t-title truncate text-xl">{formatRange(f.dep, f.ret)}</p>
+                            ) : (
+                              <p className="t-num t-title select-none truncate text-xl blur-[6px]" aria-hidden>{formatRange(f.dep, f.ret)}</p>
+                            )}
                           </div>
-                        ))}
-                      </dl>
+                        </div>
+                        {!user && <span className="shrink-0 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-primary"><Lock className="mr-1" />Members</span>}
+                      </div>
 
-                      {st && st.n >= 5 && <div className="mt-5"><PriceMeter price={f.price} min={st.min} avg={st.avg} max={st.max} /></div>}
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {[f.airline, `cheapest in ${monthLabel(f.month)}`].filter(Boolean).join(" · ")}
+                      </p>
+                      {st && st.n >= 5 && <div className="mt-3 opacity-90"><PriceMeter price={f.price} min={st.min} avg={st.avg} max={st.max} /></div>}
                     </div>
 
-                    <div className="pass-stub flex flex-col justify-between gap-3 bg-[#fbfbfc] p-5">
-                      <PriceTag price={f.price} avg={st?.avg} size="lg" note="round trip" badge={false} />
-                      <div>
-                        <p className="text-[11px] text-muted-foreground">Travel dates</p>
-                        {user ? (
-                          <p className="t-num text-sm font-bold">{formatRange(f.dep, f.ret)}</p>
-                        ) : (
-                          <p className="t-num select-none text-sm font-bold blur-[5px]" aria-hidden>{formatRange(f.dep, f.ret)}</p>
-                        )}
-                      </div>
+                    {/* How much */}
+                    <div className="pass-stub flex flex-col justify-between gap-3 bg-[#fbfbfc] p-5 lg:flex-row lg:items-center lg:gap-4">
+                      <PriceTag price={f.price} avg={st?.avg} size="xl" note="round trip" />
                       {user ? (
-                        <button
-                          onClick={() => toggleAlert(f.d)}
-                          aria-pressed={alerts.includes(f.d)}
-                          className={`font-label h-10 w-full rounded-lg text-sm font-bold transition ${alerts.includes(f.d) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
-                        >
-                          {alerts.includes(f.d) ? "🔔 Alert on" : "🔔 Alert me"}
-                        </button>
+                        <div className="flex w-full gap-2 lg:w-auto">
+                          <a
+                            href={fareLink(origin.code, f.code, f.dep, f.ret)}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="font-label flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+                          >
+                            View fare<ArrowUpRight className="ml-1.5" />
+                          </a>
+                          <button
+                            onClick={() => toggleAlert(f.d)}
+                            aria-pressed={alerts.includes(f.d)}
+                            aria-label={alerts.includes(f.d) ? "Turn off price alert" : "Alert me when the price drops"}
+                            title={alerts.includes(f.d) ? "Alert on" : "Alert me"}
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg transition ${alerts.includes(f.d) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
+                          >
+                            {alerts.includes(f.d) ? <BellOn className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+                          </button>
+                        </div>
                       ) : (
-                        <Link href="/signup?next=/flight-finder" className="font-label flex h-10 w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground transition hover:opacity-90">
-                          Unlock dates →
+                        <Link href="/signup?next=/flight-finder" className="font-label flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground transition hover:opacity-90 lg:w-auto lg:whitespace-nowrap lg:px-6">
+                          Unlock dates<ArrowRight className="ml-1.5" />
                         </Link>
                       )}
-                      <div className="hidden md:block" aria-hidden>
+                      <div className="hidden md:block lg:hidden" aria-hidden>
                         <div className="barcode h-8 rounded-sm" />
                         <p className="t-num mt-1 text-center text-[10px] tracking-[0.3em] text-muted-foreground">FK · {f.code}</p>
                       </div>

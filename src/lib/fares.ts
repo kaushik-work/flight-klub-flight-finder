@@ -1,17 +1,17 @@
 // Pure helpers and types shared by server and client. Real fares come from src/lib/flight-fares/store.ts.
 
-export type Origin = { slug: string; name: string };
+export type Origin = { slug: string; name: string; code: string };
 
 // The cities the fare scraper covers.
 export const ORIGINS: Origin[] = [
-  { slug: "bangalore", name: "Bangalore" },
-  { slug: "mumbai", name: "Mumbai" },
-  { slug: "delhi", name: "Delhi" },
-  { slug: "hyderabad", name: "Hyderabad" },
-  { slug: "chennai", name: "Chennai" },
-  { slug: "kolkata", name: "Kolkata" },
-  { slug: "pune", name: "Pune" },
-  { slug: "ahmedabad", name: "Ahmedabad" },
+  { slug: "bangalore", name: "Bangalore", code: "BLR" },
+  { slug: "mumbai", name: "Mumbai", code: "BOM" },
+  { slug: "delhi", name: "Delhi", code: "DEL" },
+  { slug: "hyderabad", name: "Hyderabad", code: "HYD" },
+  { slug: "chennai", name: "Chennai", code: "MAA" },
+  { slug: "kolkata", name: "Kolkata", code: "CCU" },
+  { slug: "pune", name: "Pune", code: "PNQ" },
+  { slug: "ahmedabad", name: "Ahmedabad", code: "AMD" },
 ];
 export const DEFAULT_ORIGIN = ORIGINS[0];
 
@@ -159,3 +159,7 @@ export const resolveDest = (v: string | undefined, rows: { d: string; code: stri
   if (!s) return "";
   return rows.find((r) => r.d === s || r.code.toLowerCase() === s)?.d ?? "";
 };
+
+/** Opens this exact round trip (route and dates) on the booking site. Only for members: the URL carries the dates. */
+export const fareLink = (originCode: string, destCode: string, dep: string, ret: string) =>
+  `https://www.google.com/travel/flights?q=Flights%20to%20${destCode}%20from%20${originCode}%20on%20${dep}%20through%20${ret}`;

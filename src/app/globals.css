@@ -124,12 +124,12 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; text-wrap: balance; }
 /* --- Boarding-pass variant: main body on the left, a stub on the right (below on phones).
        Notches sit on the perforation: sides on phones, top and bottom from tablet width up. --- */
 .ticket-pass {
-  --stub-h: 12.5rem;
-  --stub-w: 15.5rem;
+  --stub-h: 13.5rem;
+  --stub-w: 16rem;
   --y: calc(100% - var(--stub-h));
   --x: calc(100% - var(--stub-w));
 }
-@media (min-width: 768px) {
+@media (min-width: 768px) and (max-width: 1023.98px) {
   .ticket-pass {
     -webkit-mask:
       radial-gradient(circle var(--n) at var(--x) 0, transparent 98%, #000) 0 0 / 100% 51% no-repeat,
@@ -140,10 +140,14 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; text-wrap: balance; }
   }
 }
 .pass-stub { height: var(--stub-h); border-top: 2px dashed var(--perf); }
-@media (min-width: 768px) {
+@media (min-width: 768px) and (max-width: 1023.98px) {
   .pass-stub { height: auto; width: var(--stub-w); flex: none; border-top: 0; border-left: 2px dashed var(--perf); }
 }
 .barcode {
   background: repeating-linear-gradient(90deg, #14161c 0 2px, transparent 2px 4px, #14161c 4px 5px, transparent 5px 8px, #14161c 8px 11px, transparent 11px 13px);
   opacity: 0.85;
+}
+/* Two passes per row from 1024px: each card is narrower, so the stub goes back under the body as a slim strip. */
+@media (min-width: 1024px) {
+  .ticket-pass { --stub-h: 9rem; }
 }

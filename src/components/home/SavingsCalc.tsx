@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "@/components/Icons";
 import { useState } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { ORIGINS, type Route, inr, savingPct } from "@/lib/fares";
@@ -50,7 +51,7 @@ export default function SavingsCalc({ routes }: { routes: Route[] }) {
             <p className="mt-2 text-5xl font-extrabold text-[#e06b5a]">{inr(saved)}</p>
             <p className="mt-1 text-sm text-[#88909c]">{savingPct(f)}% below the route average · {pax} traveller{pax > 1 ? "s" : ""}</p>
             <Link href={`/flight-finder?from=${origin}&to=${f.d}`} className="font-label mt-5 inline-block rounded-xl bg-primary px-6 py-3 text-sm font-bold hover:opacity-90">
-              See {f.city} fares →
+              See {f.city} fares<ArrowRight className="ml-1.5" />
             </Link>
           </>
         ) : (

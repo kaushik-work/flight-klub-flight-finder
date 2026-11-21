@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Check } from "@/components/Icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -46,7 +47,7 @@ function Ticket({ s }: { s: Sample }) {
         <div className="ticket-perf flex h-24 items-center justify-between px-6">
           <div>
             <p className="text-xs font-medium text-muted-foreground">Travel dates</p>
-            <p className="select-none text-lg font-bold tracking-widest text-muted-foreground/60" aria-hidden>•• ••• → •• •••</p>
+            <p className="select-none text-lg font-bold tracking-widest text-muted-foreground/60" aria-hidden>•• ••• – •• •••</p>
           </div>
           <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">Members only</span>
         </div>
@@ -70,7 +71,7 @@ function Field({ icon, label, invalid, ok, children }: { icon: React.ReactNode; 
         <span className="block text-[11px] font-medium text-muted-foreground">{label}</span>
         {children}
       </span>
-      {ok && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white" aria-hidden>✓</span>}
+      {ok && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white" aria-hidden><Check className="h-3 w-3" /></span>}
     </label>
   );
 }
@@ -230,7 +231,7 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
           <div id="recaptcha-box" />
           {step === "done" ? (
             <div role="status">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl text-white">✓</div>
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl text-white"><Check className="h-7 w-7" /></div>
               <h1 className="mt-5 text-2xl font-extrabold tracking-tight">{waitlist ? "You are on the waitlist." : signup ? "You are in." : "Logged in."}</h1>
               <p className="mt-1 text-muted-foreground">{waitlist ? "We will message you as soon as a spot opens." : "Taking you to the fares…"}</p>
             </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArrowRight } from "@/components/Icons";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -86,7 +87,7 @@ async function PostBody({ params }: { params: Promise<{ id: string }> }) {
         <aside className="mt-16 rounded-3xl bg-[#8b1d24] px-7 py-10 text-white sm:px-12">
           <p className="text-3xl font-bold tracking-tight sm:text-4xl">See today&apos;s cheapest fares.</p>
           <p className="mt-2 text-white/75">Pick your city and find the lowest month to fly.</p>
-          <Link href="/flight-finder" className="font-label mt-6 inline-block rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary transition hover:bg-[#f6e3df]">Open the Flight Finder →</Link>
+          <Link href="/flight-finder" className="font-label mt-6 inline-block rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary transition hover:bg-[#f6e3df]">Open the Flight Finder<ArrowRight className="ml-1.5" /></Link>
         </aside>
 
         {more.length > 0 && (
@@ -97,7 +98,7 @@ async function PostBody({ params }: { params: Promise<{ id: string }> }) {
                 <li key={p.id}>
                   <Link href={`/blog/${p.id}`} className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-white p-5 text-xl font-bold leading-snug tracking-tight shadow-sm transition hover:border-primary/40 hover:text-primary hover:shadow-md">
                     {p.title}
-                    <span className="font-label flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-base transition group-hover:border-primary group-hover:bg-primary group-hover:text-white" aria-hidden>→</span>
+                    <span className="font-label flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-base transition group-hover:border-primary group-hover:bg-primary group-hover:text-white" aria-hidden><ArrowRight className="h-4 w-4" /></span>
                   </Link>
                 </li>
               ))}

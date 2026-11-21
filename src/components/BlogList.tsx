@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, ArrowUpRight } from "@/components/Icons";
 import { useMemo, useState, type CSSProperties } from "react";
 import type { Kind, Post } from "@/lib/blog";
 
@@ -41,7 +42,7 @@ function Tile({ p, i, tone }: { p: ListPost; i: number; tone: Tone }) {
     >
       <span className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full border-[26px] border-white/20" aria-hidden />
       <span className="pointer-events-none absolute -right-32 -top-40 h-96 w-96 rounded-full border-[26px] border-white/10" aria-hidden />
-      <span className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-lg text-[#14161c] transition group-hover:rotate-45 group-hover:bg-white" aria-hidden>↗</span>
+      <span className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-lg text-[#14161c] transition group-hover:rotate-45 group-hover:bg-white" aria-hidden><ArrowUpRight className="h-5 w-5" /></span>
       <div className="relative flex flex-1 flex-col p-6 sm:p-7">
         <p className="t-label pr-12 !text-[11px]">{KIND_LABEL[p.kind]}</p>
         <h3 className={`t-title mt-4 ${TITLE_CLASS[size]}`}>{p.short}</h3>
@@ -49,7 +50,7 @@ function Tile({ p, i, tone }: { p: ListPost; i: number; tone: Tone }) {
       </div>
       <div className="ticket-perf relative flex h-14 items-center justify-between px-6 text-xs opacity-80 sm:px-7" style={{ borderColor: "currentColor" }}>
         <span>{p.date} · {p.readTime}</span>
-        <span className="font-semibold">Read →</span>
+        <span className="font-semibold">Read<ArrowRight className="ml-1.5" /></span>
       </div>
     </Link>
   );

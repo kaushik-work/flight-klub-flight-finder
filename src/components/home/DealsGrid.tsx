@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "@/components/Icons";
 import { useState, type CSSProperties } from "react";
 import PriceTag from "@/components/PriceTag";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
@@ -62,7 +63,7 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
                   </div>
                   <p className="font-label mt-3 flex items-center justify-between text-xs text-muted-foreground">
                     <span>Cheapest in {monthLabel(f.month)}</span>
-                    <span className="font-bold text-primary transition group-hover:translate-x-1">See dates →</span>
+                    <span className="font-bold text-primary transition group-hover:translate-x-1">See dates<ArrowRight className="ml-1.5" /></span>
                   </p>
                 </div>
               </Link>

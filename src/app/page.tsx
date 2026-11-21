@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ArrowRight, Check } from "@/components/Icons";
 import Link from "next/link";
 import DealsGrid from "@/components/home/DealsGrid";
 import ExampleDeals from "@/components/home/ExampleDeals";
@@ -8,7 +9,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import LimitBadge from "@/components/LimitBadge";
 import { inr, monthLabel } from "@/lib/fares";
-import { getMonthMins, getRoutes } from "@/lib/flight-fares/store";
+import { getMonthMins, getNightOptions, getRoutes } from "@/lib/flight-fares/store";
 import { EMAIL, PHONE_TEL, SIGNUP_LIMIT, SITE_DESC, SITE_NAME, SITE_URL, jsonLd } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -67,7 +68,7 @@ const graph = {
 };
 
 export default async function Home() {
-  const [routes, months] = await Promise.all([getRoutes(), getMonthMins()]);
+  const [routes, months, nightOptions] = await Promise.all([getRoutes(), getMonthMins(), getNightOptions()]);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(graph)} />
@@ -86,12 +87,12 @@ export default async function Home() {
             <p className="mt-4 max-w-xl text-lg text-[#b6bcc6]">
               See the cheapest destinations and months to fly from your city, then plan your trip around the best fare.
             </p>
-            <div className="mt-8"><HeroSearch /></div>
+            <div className="mt-8"><HeroSearch nightOptions={nightOptions} /></div>
             <ul className="font-label mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm text-[#b6bcc6]">
-              <li>✓ Round-trip fares in ₹</li>
-              <li>✓ 8 departure cities</li>
-              <li>✓ Direct-only filter</li>
-              <li>✓ ₹399/year · first {SIGNUP_LIMIT.toLocaleString("en-IN")} members</li>
+              <li><Check className="mr-1.5 text-[#e06b5a]" />Round-trip fares in ₹</li>
+              <li><Check className="mr-1.5 text-[#e06b5a]" />8 departure cities</li>
+              <li><Check className="mr-1.5 text-[#e06b5a]" />Direct-only filter</li>
+              <li><Check className="mr-1.5 text-[#e06b5a]" />₹399/year · first {SIGNUP_LIMIT.toLocaleString("en-IN")} members</li>
             </ul>
           </div>
         </section>
@@ -106,7 +107,7 @@ export default async function Home() {
           <div className="mt-6"><DealsGrid routes={routes} /></div>
           <div className="mt-8 text-center">
             <Link href="/flight-finder" className="font-label inline-block rounded-xl border border-primary px-6 py-3 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-foreground">
-              Browse all destinations →
+              Browse all destinations<ArrowRight className="ml-1.5" />
             </Link>
           </div>
         </section>
@@ -123,7 +124,7 @@ export default async function Home() {
                   className="ticket group block p-5" style={{ "--n": "8px", "--y": "58%" } as React.CSSProperties}>
                   <p className="font-label text-lg font-bold">{monthLabel(m)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">from {inr(from)}</p>
-                  <p className="font-label mt-4 text-sm font-bold text-primary transition group-hover:translate-x-1">Explore →</p>
+                  <p className="font-label mt-4 text-sm font-bold text-primary transition group-hover:translate-x-1">Explore<ArrowRight className="ml-1.5" /></p>
                 </Link>
                 </div>
               ))}
@@ -186,7 +187,7 @@ export default async function Home() {
             <h2 className="text-3xl font-extrabold sm:text-4xl">Stop searching. Start saving.</h2>
             <p className="mx-auto mt-2 max-w-md text-white/80">Your next trip is cheaper than you think. Founding membership is ₹399 a year, limited to 1,000 members.</p>
             <Link href="/flight-finder" className="font-label mt-6 inline-block rounded-xl bg-white px-8 py-3 text-sm font-bold text-primary transition hover:opacity-90">
-              Become a member · ₹399/year →
+              Become a member · ₹399/year<ArrowRight className="ml-1.5" />
             </Link>
           </div>
         </section>

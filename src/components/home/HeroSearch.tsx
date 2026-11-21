@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "@/components/Icons";
 import { useState } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { DESTINATIONS, ORIGINS } from "@/lib/fares";
@@ -8,7 +9,7 @@ import { DESTINATIONS, ORIGINS } from "@/lib/fares";
 const field =
   "font-label h-12 w-full appearance-none rounded-xl border border-border bg-white pl-4 pr-10 text-sm font-semibold outline-none transition hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10";
 
-export default function HeroSearch() {
+export default function HeroSearch({ nightOptions = [3, 5, 7] }: { nightOptions?: number[] }) {
   const router = useRouter();
   const { origin: near, setUserOrigin } = useHomeOrigin();
   const [picked, setFrom] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export default function HeroSearch() {
       <div>
         <span className={label}>Trip length</span>
         <div className="flex h-12 gap-1 rounded-xl border border-border bg-muted p-1">
-          {[3, 5, 7].map((n) => (
+          {nightOptions.map((n) => (
             <button key={n} type="button" aria-pressed={nights === n} onClick={() => setNights(nights === n ? null : n)}
               className={`font-label flex-1 rounded-lg px-4 text-sm font-semibold transition ${nights === n ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
               {n}N
@@ -66,7 +67,7 @@ export default function HeroSearch() {
         </div>
       </div>
       <button className="font-label h-12 rounded-xl bg-primary px-8 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 active:scale-[0.98]">
-        Find cheap flights →
+        Find cheap flights<ArrowRight className="ml-1.5" />
       </button>
     </form>
     </div>

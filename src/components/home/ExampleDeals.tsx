@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "@/components/Icons";
 import PriceTag from "@/components/PriceTag";
 import type { CSSProperties } from "react";
 import { ORIGINS, type Route, formatRange, formatStops, gradientFor, inr, monthLabel, savingPct } from "@/lib/fares";
@@ -54,7 +55,7 @@ export default function ExampleDeals({ routes }: { routes: Route[] }) {
                 </div>
                 <Link href="/signup" className="group/stub mt-4 flex items-center justify-between gap-3 rounded-xl border border-dashed border-primary/30 bg-secondary px-3.5 py-3 transition hover:border-primary hover:bg-primary hover:text-primary-foreground">
                   <span className="font-label select-none text-sm font-semibold blur-[5px] transition group-hover/stub:blur-[6px]" aria-hidden>{formatRange(r.dep, r.ret)}</span>
-                  <span className="font-label whitespace-nowrap text-xs font-bold text-primary transition group-hover/stub:text-primary-foreground">Unlock dates →</span>
+                  <span className="font-label whitespace-nowrap text-xs font-bold text-primary transition group-hover/stub:text-primary-foreground">Unlock dates<ArrowRight className="ml-1.5" /></span>
                 </Link>
               </div>
               </div>
@@ -66,7 +67,7 @@ export default function ExampleDeals({ routes }: { routes: Route[] }) {
       <p className="mt-4 text-center text-xs text-muted-foreground">Examples from recently observed fares. Prices change, so these are not live offers.</p>
       <div className="mt-6 text-center">
         <Link href="/signup" className="font-label inline-block rounded-xl bg-primary px-8 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90">
-          Become a member · ₹399/year →
+          Become a member · ₹399/year<ArrowRight className="ml-1.5" />
         </Link>
       </div>
     </section>
