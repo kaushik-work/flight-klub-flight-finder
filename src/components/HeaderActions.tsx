@@ -4,13 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useHydrated } from "@/lib/useHydrated";
 
 
 const on = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
 
 export default function HeaderActions() {
   const path = usePathname() ?? "";
-  const { ready, user, alerts, logout } = useAuth();
+  const auth = useAuth();
+  const hydrated = useHydrated();
+  const ready = hydrated && auth.ready;
+  const user = hydrated ? auth.user : null;
+  const alerts = hydrated ? auth.alerts : [];
+  const { logout } = auth;
   const [open, setOpen] = useState(false);
 
   return (

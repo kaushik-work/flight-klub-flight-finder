@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useHydrated } from "@/lib/useHydrated";
 import {
   ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, inr, monthLabel,
 } from "@/lib/fares";
@@ -64,7 +65,13 @@ export default function FlightFinder({
 }) {
   const router = useRouter();
   const [moving, startMove] = useTransition();
-  const { ready, user, alerts, toggleAlert } = useAuth();
+  const auth = useAuth();
+  // The login lives in localStorage, so it is only known in the browser. Wait for hydration before using it.
+  const hydrated = useHydrated();
+  const ready = hydrated && auth.ready;
+  const user = hydrated ? auth.user : null;
+  const alerts = hydrated ? auth.alerts : [];
+  const { toggleAlert } = auth;
   const { origin: near, setUserOrigin } = useHomeOrigin();
 
   // No city in the URL: use the nearest airport once it is known.
