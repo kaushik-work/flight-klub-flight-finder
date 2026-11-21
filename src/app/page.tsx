@@ -9,7 +9,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import LimitBadge from "@/components/LimitBadge";
 import { inr, monthLabel } from "@/lib/fares";
-import { getMonthMins, getNightOptions, getRoutes } from "@/lib/flight-fares/store";
+import { getDestinations, getMonthMins, getNightOptions, getRoutes } from "@/lib/flight-fares/store";
 import { EMAIL, PHONE_TEL, SIGNUP_LIMIT, SITE_DESC, SITE_NAME, SITE_URL, jsonLd } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -68,7 +68,7 @@ const graph = {
 };
 
 export default async function Home() {
-  const [routes, months, nightOptions] = await Promise.all([getRoutes(), getMonthMins(), getNightOptions()]);
+  const [routes, months, nightOptions, destinations] = await Promise.all([getRoutes(), getMonthMins(), getNightOptions(), getDestinations()]);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(graph)} />
@@ -87,7 +87,7 @@ export default async function Home() {
             <p className="mt-4 max-w-xl text-lg text-[#b6bcc6]">
               See the cheapest destinations and months to fly from your city, then plan your trip around the best fare.
             </p>
-            <div className="mt-8"><HeroSearch nightOptions={nightOptions} /></div>
+            <div className="mt-8"><HeroSearch nightOptions={nightOptions} destinations={destinations} /></div>
             <ul className="font-label mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm text-[#b6bcc6]">
               <li><Check className="mr-1.5 text-[#e06b5a]" />Round-trip fares in ₹</li>
               <li><Check className="mr-1.5 text-[#e06b5a]" />8 departure cities</li>

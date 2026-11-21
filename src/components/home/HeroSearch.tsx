@@ -9,7 +9,7 @@ import { DESTINATIONS, ORIGINS } from "@/lib/fares";
 const field =
   "font-label h-12 w-full appearance-none rounded-xl border border-border bg-white pl-4 pr-10 text-sm font-semibold outline-none transition hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10";
 
-export default function HeroSearch({ nightOptions = [3, 5, 7] }: { nightOptions?: number[] }) {
+export default function HeroSearch({ nightOptions = [3, 5, 7], destinations }: { nightOptions?: number[]; destinations?: { slug: string; city: string; intl: boolean }[] }) {
   const router = useRouter();
   const { origin: near, setUserOrigin } = useHomeOrigin();
   const [picked, setFrom] = useState<string | null>(null);
@@ -29,7 +29,9 @@ export default function HeroSearch({ nightOptions = [3, 5, 7] }: { nightOptions?
 
   const label = "font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
 
-  const list = DESTINATIONS.filter((f) => f.intl === intl && f.slug !== from);
+  // Destinations come from the stored fares, so new ones (China, Srinagar, Port Blair...) appear once they are scraped.
+  const source = destinations?.length ? destinations : DESTINATIONS;
+  const list = source.filter((f) => f.intl === intl && f.slug !== from).sort((a, b) => a.city.localeCompare(b.city));
 
   return (
     <div className="rounded-2xl bg-white p-4 text-foreground shadow-2xl shadow-black/30">
