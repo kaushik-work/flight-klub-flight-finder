@@ -14,7 +14,7 @@ export default function HeaderActions() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="font-label flex items-center gap-3 text-sm font-medium text-muted-foreground sm:gap-5">
+    <nav className="font-label flex items-center gap-1 text-sm font-medium text-muted-foreground sm:gap-5">
       {[["/flight-finder", "Flight deals"], ["/blog", "Blog"]].map(([href, text]) => (
         <Link key={href} href={href} aria-current={on(path, href) ? "page" : undefined}
           className={`relative hidden py-2 transition sm:inline ${on(path, href) ? "font-semibold text-primary after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-primary" : "hover:text-primary"}`}>
@@ -51,9 +51,9 @@ export default function HeaderActions() {
       ) : (
         <>
           <Link href="/login" aria-current={on(path, "/login") ? "page" : undefined}
-            className={`rounded-full px-4 py-2 transition ${on(path, "/login") ? "bg-secondary font-semibold text-primary ring-1 ring-primary/30" : "text-foreground hover:text-primary"}`}>Log in</Link>
+            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition sm:px-4 sm:py-2 ${on(path, "/login") ? "bg-secondary font-semibold text-primary ring-1 ring-primary/30" : "text-foreground hover:text-primary"}`}>Log in</Link>
           <Link href="/signup" aria-current={on(path, "/signup") ? "page" : undefined}
-            className={`rounded-full bg-primary px-4 py-2 text-primary-foreground transition hover:opacity-90 ${on(path, "/signup") ? "ring-4 ring-primary/25" : ""}`}>Sign up</Link>
+            className={`whitespace-nowrap rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground transition hover:opacity-90 sm:px-4 sm:py-2 ${on(path, "/signup") ? "ring-4 ring-primary/25" : ""}`}>Sign up</Link>
         </>
       )}
     </nav>

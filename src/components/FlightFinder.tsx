@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import PriceTag from "@/components/PriceTag";
+import PriceMeter from "@/components/PriceMeter";
+import PriceTag, { DropIcon } from "@/components/PriceTag";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
-  ORIGINS, type Origin, type Row, formatDay, formatDuration, formatRange, formatStops, gradientFor, inr, monthLabel,
+  ORIGINS, type Origin, type Row, formatDay, formatDuration, formatRange, formatStops, inr, monthLabel,
 } from "@/lib/fares";
 
 const seg = (on: boolean) =>
@@ -106,12 +107,20 @@ export default function FlightFinder({
     );
   }, [pool, month, nights, dest, direct, sort]);
 
-  // Average fare per destination over every priced date, so a result can show how far below average it is.
-  const avgByDest = useMemo(() => {
-    const t: Record<string, { sum: number; n: number }> = {};
-    for (const r of pool) { const x = (t[r.d] ??= { sum: 0, n: 0 }); x.sum += r.price; x.n += 1; }
-    return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v.sum / v.n]));
+  // Min, average and max fare per destination over every priced date: drives the price meter and the badges.
+  const stats = useMemo(() => {
+    const t: Record<string, { sum: number; n: number; min: number; max: number }> = {};
+    for (const r of pool) {
+      const x = (t[r.d] ??= { sum: 0, n: 0, min: Infinity, max: 0 });
+      x.sum += r.price; x.n += 1; x.min = Math.min(x.min, r.price); x.max = Math.max(x.max, r.price);
+    }
+    return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { avg: v.sum / v.n, min: v.min, max: v.max, n: v.n }]));
   }, [pool]);
+  const cheapestId = useMemo(() => results.reduce<string | null>((m, f) => (m === null || f.price < results.find((x) => x.d === m)!.price ? f.d : m), null), [results]);
+  const fastestId = useMemo(() => {
+    const timed = results.filter((f) => f.mins);
+    return timed.length > 1 ? timed.reduce((m, f) => ((f.mins ?? Infinity) < (m.mins ?? Infinity) ? f : m)).d : null;
+  }, [results]);
 
   const lastSeen = useMemo(() => rows.reduce((m, r) => (r.seen > m ? r.seen : m), ""), [rows]);
 
@@ -124,7 +133,7 @@ export default function FlightFinder({
         <p className="mt-2 text-muted-foreground">Cheapest destinations and months, ranked by recent round-trip fares.</p>
       </section>
 
-      <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+      <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 sm:items-end lg:grid-cols-[1fr_1fr_auto]">
         <Field label="Flying from">
           <select
             className={field}
@@ -206,53 +215,85 @@ export default function FlightFinder({
               : "No flights match these filters. Try another month or trip length."}
           </p>
         ) : (
-          <ul className={`grid gap-5 transition-opacity sm:grid-cols-2 lg:grid-cols-3 ${moving ? "opacity-50" : ""}`}>
+          <ul className={`grid gap-5 transition-opacity ${moving ? "opacity-50" : ""}`}>
             {results.map((f, i) => {
               const stops = formatStops(f.stops);
               const dur = formatDuration(f.mins);
+              const st = stats[f.d];
+              const pct = st && st.avg > f.price ? Math.round((1 - f.price / st.avg) * 100) : 0;
               return (
-                <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal group">
-                  <div className="ticket" style={{ "--y": "9rem" } as CSSProperties}>
-                  <div className="relative flex h-36 items-end justify-between p-4 text-white" style={{ background: gradientFor(f.d) }}>
-                    <span className="font-label absolute left-4 top-4 rounded-full bg-black/40 px-2.5 py-1 text-xs font-semibold">#{i + 1}</span>
-                    <span className="font-label text-4xl font-bold tracking-wider">{f.code}</span>
-                    {stops && <span className="font-label rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">{stops}</span>}
-                  </div>
-                  <div className="ticket-perf p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-bold leading-tight">{f.city}</h3>
-                        <p className="text-xs text-muted-foreground">{f.country}</p>
+                <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal">
+                  <div className="ticket ticket-pass md:flex">
+                    <div className="min-w-0 flex-1 p-5 md:p-6">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+                        {f.d === cheapestId && results.length > 1 && <span className="rounded-full bg-price px-2.5 py-1 text-white">Cheapest</span>}
+                        {f.d === fastestId && <span className="rounded-full bg-[#e4e9f2] px-2.5 py-1 text-[#1f2a44]">Fastest</span>}
+                        {f.stops === 0 && <span className="rounded-full bg-price-soft px-2.5 py-1 text-price">Direct</span>}
+                        {pct > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-price-soft px-2.5 py-1 text-price"><DropIcon className="h-3 w-3" />{pct}% below average</span>}
                       </div>
-                      <PriceTag price={f.price} avg={avgByDest[f.d]} align="right" note="round trip" />
+
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="min-w-0">
+                          <p className="font-label text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">From</p>
+                          <p className="t-title truncate text-xl sm:text-2xl">{origin.name}</p>
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col items-center text-[11px] font-medium text-muted-foreground" aria-hidden>
+                          <span>{[dur, stops && f.stops !== 0 ? stops : null].filter(Boolean).join(" · ") || "Round trip"}</span>
+                          <span className="flex w-full items-center gap-1 text-muted-foreground/50">
+                            <span className="h-1.5 w-1.5 rounded-full border border-current" />
+                            <span className="h-px flex-1 border-t border-dashed border-current" />
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" transform="rotate(90 12 12)" /></svg>
+                            <span className="h-px flex-1 border-t border-dashed border-current" />
+                            <span className="h-1.5 w-1.5 rounded-full border border-current" />
+                          </span>
+                          <span>Round trip</span>
+                        </div>
+                        <div className="min-w-0 text-right">
+                          <p className="font-label text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">To · {f.code}</p>
+                          <p className="t-title truncate text-xl sm:text-2xl">{f.city}</p>
+                        </div>
+                      </div>
+
+                      <dl className="mt-5 grid grid-cols-3 gap-2 text-sm">
+                        {[["Trip", `${f.nights} nights`], ["Airline", f.airline || "Not listed"], ["Best month", monthLabel(f.month)]].map(([k, v]) => (
+                          <div key={k} className="min-w-0 rounded-xl bg-muted px-3 py-2.5">
+                            <dt className="text-[11px] text-muted-foreground">{k}</dt>
+                            <dd className="mt-0.5 truncate font-semibold">{v}</dd>
+                          </div>
+                        ))}
+                      </dl>
+
+                      {st && st.n >= 5 && <div className="mt-5"><PriceMeter price={f.price} min={st.min} avg={st.avg} max={st.max} /></div>}
                     </div>
-                    <dl className="font-label mt-4 grid grid-cols-3 gap-2 rounded-xl bg-muted p-3 text-center text-xs">
-                      <div><dt className="text-muted-foreground">Flight</dt><dd className="mt-0.5 font-semibold">{dur ?? "—"}</dd></div>
-                      <div><dt className="text-muted-foreground">Trip</dt><dd className="mt-0.5 font-semibold">{f.nights}N</dd></div>
-                      <div><dt className="text-muted-foreground">Airline</dt><dd className="mt-0.5 truncate font-semibold">{f.airline || "—"}</dd></div>
-                    </dl>
-                    <div className="mt-3 flex items-center justify-between gap-3">
+
+                    <div className="pass-stub flex flex-col justify-between gap-3 bg-[#fbfbfc] p-5">
+                      <PriceTag price={f.price} avg={st?.avg} size="lg" note="round trip" badge={false} />
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Travel dates</p>
+                        {user ? (
+                          <p className="t-num text-sm font-bold">{formatRange(f.dep, f.ret)}</p>
+                        ) : (
+                          <p className="t-num select-none text-sm font-bold blur-[5px]" aria-hidden>{formatRange(f.dep, f.ret)}</p>
+                        )}
+                      </div>
                       {user ? (
-                        <>
-                          <p className="font-label text-xs font-semibold">{formatRange(f.dep, f.ret)}</p>
-                          <button
-                            onClick={() => toggleAlert(f.d)}
-                            aria-pressed={alerts.includes(f.d)}
-                            className={`font-label whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold transition ${alerts.includes(f.d) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
-                          >
-                            {alerts.includes(f.d) ? "🔔 Alert on" : "🔔 Alert me"}
-                          </button>
-                        </>
+                        <button
+                          onClick={() => toggleAlert(f.d)}
+                          aria-pressed={alerts.includes(f.d)}
+                          className={`font-label h-10 w-full rounded-lg text-sm font-bold transition ${alerts.includes(f.d) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
+                        >
+                          {alerts.includes(f.d) ? "🔔 Alert on" : "🔔 Alert me"}
+                        </button>
                       ) : (
-                        <>
-                          <p className="font-label select-none text-xs text-muted-foreground blur-[5px]" aria-hidden>{formatRange(f.dep, f.ret)}</p>
-                          <Link href="/signup?next=/flight-finder" className="font-label whitespace-nowrap rounded-lg bg-secondary px-3 py-2 text-xs font-bold text-secondary-foreground transition hover:bg-primary hover:text-primary-foreground">
-                            🔒 Unlock dates
-                          </Link>
-                        </>
+                        <Link href="/signup?next=/flight-finder" className="font-label flex h-10 w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground transition hover:opacity-90">
+                          Unlock dates →
+                        </Link>
                       )}
+                      <div className="hidden md:block" aria-hidden>
+                        <div className="barcode h-8 rounded-sm" />
+                        <p className="t-num mt-1 text-center text-[10px] tracking-[0.3em] text-muted-foreground">FK · {f.code}</p>
+                      </div>
                     </div>
-                  </div>
                   </div>
                 </li>
               );

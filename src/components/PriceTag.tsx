@@ -17,8 +17,8 @@ export const dropPct = (price: number, avg?: number | null) => (avg && avg > pri
  * and says how much lower it is. Otherwise it is a plain price.
  */
 export default function PriceTag({
-  price, avg, size = "md", align = "left", note,
-}: { price: number; avg?: number | null; size?: "md" | "lg" | "xl"; align?: "left" | "right"; note?: string }) {
+  price, avg, size = "md", align = "left", note, badge = true,
+}: { price: number; avg?: number | null; size?: "md" | "lg" | "xl"; align?: "left" | "right"; note?: string; badge?: boolean }) {
   const off = dropPct(price, avg);
   const text = { md: "text-xl", lg: "text-2xl", xl: "text-4xl" }[size];
   const row = align === "right" ? "justify-end" : "";
@@ -30,10 +30,10 @@ export default function PriceTag({
       </p>
       {off > 0 && avg && (
         <p className={`t-num mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground ${row}`}>
-          <s className="decoration-[#dc2626]/70 decoration-2">{inr(avg)}</s>
-          <span className="inline-flex items-center gap-1 rounded-full bg-price-soft px-2 py-0.5 font-bold text-price">
+          <s className="decoration-[#dc2626]/80 decoration-[1.5px]">{inr(avg)}</s>
+          {badge && <span className="inline-flex items-center gap-1 rounded-full bg-price-soft px-2 py-0.5 font-bold text-price">
             <DropIcon className="h-3 w-3" />{off}% lower
-          </span>
+          </span>}
         </p>
       )}
       {note && <p className="mt-0.5 text-[11px] text-muted-foreground">{note}</p>}

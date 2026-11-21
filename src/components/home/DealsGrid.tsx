@@ -49,7 +49,7 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
                 className="ticket group block">
                 <div className="relative flex h-40 items-end justify-between p-4 text-white" style={{ background: gradientFor(f.d) }}>
                   {pct > 0 && <span className="font-label absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-bold text-primary">{pct}% below average</span>}
-                  <span className="font-label text-5xl font-bold tracking-wider">{f.code}</span>
+                  <span className="font-label text-lg font-bold tracking-widest opacity-60">{f.code}</span>
                   {stops && <span className="font-label rounded-full bg-black/40 px-3 py-1 text-xs">{stops}</span>}
                 </div>
                 <div className="ticket-perf p-4">
@@ -58,7 +58,7 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
                       <h3 className="text-lg font-bold">{f.city}</h3>
                       <p className="text-xs text-muted-foreground">Round trip · {f.nights}N{formatDuration(f.mins) ? ` · ${formatDuration(f.mins)}` : ""}</p>
                     </div>
-                    <PriceTag price={f.price} avg={f.avg} align="right" />
+                    <PriceTag price={f.price} avg={f.avg} align="right" badge={false} />
                   </div>
                   <p className="font-label mt-3 flex items-center justify-between text-xs text-muted-foreground">
                     <span>Cheapest in {monthLabel(f.month)}</span>

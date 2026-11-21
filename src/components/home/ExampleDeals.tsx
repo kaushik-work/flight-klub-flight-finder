@@ -31,29 +31,31 @@ export default function ExampleDeals({ routes }: { routes: Route[] }) {
           return (
             <li key={`${r.o}-${r.d}`} style={{ "--i": idx } as CSSProperties} className="ticket-shell reveal">
               <div className="ticket" style={{ "--y": "9rem" } as CSSProperties}>
-              <div className="relative flex h-36 items-end justify-between p-4 text-white" style={{ background: gradientFor(r.d) }}>
-                {pct > 0 && <span className="font-label absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-bold text-primary">{pct}% off avg</span>}
-                <span className="font-label absolute right-4 top-4 rounded-full bg-black/40 px-3 py-1 text-xs">Round trip</span>
+              <div className="relative flex h-36 items-end justify-between p-5 text-white" style={{ background: gradientFor(r.d) }}>
+                {pct > 0 && <span className="font-label absolute left-5 top-5 rounded-full bg-white px-3 py-1 text-xs font-bold text-primary">{pct}% below average</span>}
+                <span className="font-label absolute right-5 top-5 rounded-full bg-black/35 px-3 py-1 text-xs">Round trip</span>
                 <div>
-                  <p className="font-label text-xs opacity-80">{from} →</p>
-                  <h3 className="text-2xl font-extrabold leading-tight">{r.city}</h3>
+                  <p className="font-label text-xs opacity-80">From {from}</p>
+                  <h3 className="t-title text-3xl">{r.city}</h3>
                 </div>
-                <span className="font-label text-3xl font-bold tracking-wider opacity-90">{r.code}</span>
+                <span className="font-label text-lg font-bold tracking-widest opacity-60">{r.code}</span>
               </div>
-              <div className="ticket-perf p-4">
-                <div className="flex items-end justify-between">
-                  <PriceTag price={r.price} avg={r.avg} size="lg" />
+              <div className="ticket-perf p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <PriceTag price={r.price} avg={r.avg} size="lg" badge={false} />
                   {r.avg > r.price && (
-                    <p className="font-label rounded-lg bg-price-soft px-3 py-1.5 text-xs font-bold text-price">Save {inr(r.avg - r.price)}</p>
+                    <p className="font-label whitespace-nowrap rounded-lg bg-price-soft px-3 py-1.5 text-xs font-bold text-price">Save {inr(r.avg - r.price)}</p>
                   )}
                 </div>
-                <p className="font-label mt-3 text-xs text-muted-foreground">
-                  {[stops, r.airline, `cheapest in ${monthLabel(r.month)}`].filter(Boolean).join(" · ")}
-                </p>
-                <div className="mt-4 flex items-center justify-between rounded-xl border border-dashed border-border bg-muted px-3 py-2.5">
-                  <span className="font-label select-none text-xs blur-[5px]" aria-hidden>{formatRange(r.dep, r.ret)}</span>
-                  <span className="font-label text-xs font-semibold text-muted-foreground">🔒 Dates for members</span>
+                <div className="mt-4 flex flex-wrap gap-1.5 text-xs font-medium">
+                  {stops && <span className={`rounded-full px-2.5 py-1 ${r.stops === 0 ? "bg-price-soft text-price" : "bg-muted text-muted-foreground"}`}>{stops}</span>}
+                  {r.airline && <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">{r.airline}</span>}
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">Cheapest in {monthLabel(r.month)}</span>
                 </div>
+                <Link href="/signup" className="group/stub mt-4 flex items-center justify-between gap-3 rounded-xl border border-dashed border-primary/30 bg-secondary px-3.5 py-3 transition hover:border-primary hover:bg-primary hover:text-primary-foreground">
+                  <span className="font-label select-none text-sm font-semibold blur-[5px] transition group-hover/stub:blur-[6px]" aria-hidden>{formatRange(r.dep, r.ret)}</span>
+                  <span className="font-label whitespace-nowrap text-xs font-bold text-primary transition group-hover/stub:text-primary-foreground">Unlock dates →</span>
+                </Link>
               </div>
               </div>
             </li>

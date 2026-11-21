@@ -40,7 +40,7 @@ export default function HeroSearch() {
         </button>
       ))}
     </div>
-    <form onSubmit={go} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+    <form onSubmit={go} className="grid gap-4 sm:grid-cols-2 sm:items-end lg:grid-cols-[1fr_1fr_auto_auto]">
       <label className="block">
         <span className={label}>Flying from</span>
         <select className={field} value={from} onChange={(e) => setFrom(e.target.value)}>
