@@ -106,15 +106,17 @@ export default function FlightFinder({
     );
   }, [pool, month, nights, dest, direct, sort]);
 
-  // Min, average and max fare per destination over every priced date: drives the price meter and the badges.
+  // Min, average and max fare per destination and trip length, over every priced date. A fare is only compared
+  // with trips of the same length, so a 3-night fare is never called cheap against 7-night prices.
   const stats = useMemo(() => {
     const t: Record<string, { sum: number; n: number; min: number; max: number }> = {};
     for (const r of pool) {
-      const x = (t[r.d] ??= { sum: 0, n: 0, min: Infinity, max: 0 });
+      const x = (t[`${r.d}:${r.nights}`] ??= { sum: 0, n: 0, min: Infinity, max: 0 });
       x.sum += r.price; x.n += 1; x.min = Math.min(x.min, r.price); x.max = Math.max(x.max, r.price);
     }
     return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { avg: v.sum / v.n, min: v.min, max: v.max, n: v.n }]));
   }, [pool]);
+  const statFor = (f: Row) => stats[`${f.d}:${f.nights}`];
   const cheapestId = useMemo(() => results.reduce<string | null>((m, f) => (m === null || f.price < results.find((x) => x.d === m)!.price ? f.d : m), null), [results]);
   const fastestId = useMemo(() => {
     const timed = results.filter((f) => f.mins);
@@ -123,7 +125,7 @@ export default function FlightFinder({
 
   const hasAlert = (dest: string) => alerts.some((a) => a.id === alertId(origin.slug, dest));
   function openAlert(f: Row) {
-    setAlertFor({ origin: origin.slug, originName: origin.name, dest: f.d, city: f.city, code: f.code, price: f.price, avg: stats[f.d]?.avg });
+    setAlertFor({ origin: origin.slug, originName: origin.name, dest: f.d, city: f.city, code: f.code, price: f.price, avg: statFor(f)?.avg });
   }
 
   const lastSeen = useMemo(() => rows.reduce((m, r) => (r.seen > m ? r.seen : m), ""), [rows]);
@@ -224,7 +226,7 @@ export default function FlightFinder({
             {results.map((f, i) => {
               const stops = formatStops(f.stops);
               const dur = formatDuration(f.mins);
-              const st = stats[f.d];
+              const st = statFor(f);
               return (
                 <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal">
                   <div className="ticket ticket-pass md:flex lg:block">
@@ -279,7 +281,7 @@ export default function FlightFinder({
                       <p className="mt-3 text-xs text-muted-foreground">
                         {[f.airline, `cheapest in ${monthLabel(f.month)}`].filter(Boolean).join(" · ")}
                       </p>
-                      {st && st.n >= 5 && <div className="mt-3 opacity-90"><PriceMeter price={f.price} min={st.min} avg={st.avg} max={st.max} /></div>}
+                      {st && st.n >= 4 && <div className="mt-3 opacity-90"><PriceMeter price={f.price} min={st.min} avg={st.avg} max={st.max} /></div>}
                     </div>
 
                     {/* How much */}
@@ -317,7 +319,7 @@ export default function FlightFinder({
           </ul>
         )}
         <p className="mt-6 text-xs text-muted-foreground">
-          Round-trip fares in rupees{lastSeen ? `, last checked ${formatDay(lastSeen)}` : ""}. Prices change often, so confirm the final fare before you book.
+          Round-trip fares in rupees{lastSeen ? `, last checked ${formatDay(lastSeen)}` : ""}. Each fare is the lowest we found on the dates we checked for that month and trip length, and &quot;below average&quot; compares it with the same trip length on the same route. Prices change often, so confirm the final fare before you book.
         </p>
       </section>
       {alertFor && <AlertDialog route={alertFor} onClose={() => setAlertFor(null)} />}

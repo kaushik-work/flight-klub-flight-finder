@@ -69,7 +69,11 @@ async function loadRoutes(): Promise<Route[]> {
   const out = await (await getFaresDb()).collection(COLLECTION).aggregate([
     { $match: { price: { $gt: 0 } } },
     { $sort: { price: 1 } },
-    { $group: { _id: { o: "$originSlug", d: "$destinationSlug" }, avg: { $avg: "$price" }, n: { $sum: 1 }, best: { $first: "$$ROOT" } } },
+    // Average per trip length first: a 3-night fare compared with an average that includes 7-night trips looks
+    // like a bigger saving than it is. "Below average" means below the same trip length on the same route.
+    { $group: { _id: { o: "$originSlug", d: "$destinationSlug", nights: "$nights" }, avg: { $avg: "$price" }, n: { $sum: 1 }, best: { $first: "$$ROOT" } } },
+    { $sort: { "best.price": 1 } },
+    { $group: { _id: { o: "$_id.o", d: "$_id.d" }, avg: { $first: "$avg" }, n: { $first: "$n" }, best: { $first: "$best" } } },
   ]).toArray();
   return out.map((g) => ({ o: g._id.o as string, avg: Math.round(g.avg as number), n: g.n as number, ...base(g.best as Doc) }));
 }

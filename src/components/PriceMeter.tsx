@@ -4,7 +4,7 @@ export default function PriceMeter({ price, min, avg, max }: { price: number; mi
   const at = (v: number) => Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100));
   const lowest = price <= min;
   const below = avg > price ? Math.round((1 - price / avg) * 100) : 0;
-  const label = lowest ? "Lowest we have seen on this route" : below > 0 ? `${below}% below this route's average` : "Around this route's average";
+  const label = lowest ? "Lowest we have seen for this trip length" : below > 0 ? `${below}% below average for this trip length` : "Around average for this trip length";
   const fmt = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
   return (
     <div>
