@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Bell, BellOn, Lock } from "@/components/Icons";
 import DestinationPicker, { type DestOption } from "@/components/DestinationPicker";
+import PriceRange from "@/components/PriceRange";
 import PriceTag from "@/components/PriceTag";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
@@ -245,7 +246,7 @@ export default function FlightFinder({
                       </div>
 
                       {/* When: three plain columns, no boxes. */}
-                      <dl className="mt-5 grid grid-cols-[1.5fr_1fr_1fr] gap-3 border-t border-border pt-4 text-sm">
+                      <dl className="mt-5 grid gap-3 border-t border-border pt-4 text-sm" style={{ gridTemplateColumns: "1.5fr 1fr 1fr" }}>
                         <div className="min-w-0">
                           <dt className="text-xs text-muted-foreground">Dates</dt>
                           {user ? (
@@ -260,10 +261,12 @@ export default function FlightFinder({
                         <div className="min-w-0"><dt className="text-xs text-muted-foreground">Stay</dt><dd className="mt-0.5"><span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-semibold text-primary">{f.nights} nights</span></dd></div>
                         <div className="min-w-0"><dt className="text-xs text-muted-foreground">Airline</dt><dd className="mt-0.5 truncate font-semibold">{f.airline || "-"}</dd></div>
                       </dl>
+
+                      {st && st.n >= 4 && <PriceRange price={f.price} min={st.min} avg={st.avg} max={st.max} label={`Fare range for ${f.nights} nights`} />}
                     </div>
 
                     {/* How much: the same height on every card so the tear lines line up. */}
-                    <div className="ticket-perf flex h-[5.25rem] items-center justify-between gap-3 bg-[#fbfbfc] px-5">
+                    <div className="ticket-perf flex items-center justify-between gap-3 bg-[#fbfbfc] px-5" style={{ height: "5.25rem" }}>
                       <div className="min-w-0">
                         <PriceTag price={f.price} avg={st?.avg} size="lg" />
                       </div>
