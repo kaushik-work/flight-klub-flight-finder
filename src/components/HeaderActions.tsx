@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useHydrated } from "@/lib/useHydrated";
+import { useHydrated, useNow } from "@/lib/useHydrated";
 
 
 const on = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
@@ -17,6 +17,13 @@ export default function HeaderActions() {
   const user = hydrated ? auth.user : null;
   const alerts = hydrated ? auth.alerts : [];
   const { logout } = auth;
+  const now = useNow();
+  // Over 30 days left: show the expiry date. 30 or fewer: show the days left.
+  const left = user?.renews && now ? Math.ceil((new Date(user.renews).getTime() - now) / 86_400_000) : null;
+  const memberLine = !user?.renews ? null
+    : left !== null && left <= 0 ? "Membership expired"
+    : left !== null && left <= 30 ? `Member · ${left} day${left === 1 ? "" : "s"} left`
+    : `Member · expires ${new Date(user.renews).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
   const [open, setOpen] = useState(false);
 
   return (
@@ -43,11 +50,11 @@ export default function HeaderActions() {
               <div role="menu" className="absolute right-0 z-20 mt-2 w-64 rounded-2xl border border-border bg-card p-2 text-foreground shadow-xl">
                 <div className="border-b border-border px-3 pb-3 pt-2">
                   <p className="font-bold">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.phone ? `+91 ${user.phone}` : "Signed in with Google"} · {user.city}</p>
-                  {user.renews && <p className="font-label mt-1 text-xs font-semibold text-primary">Member · valid till {new Date(user.renews).toLocaleString("en-IN", { month: "short", year: "numeric" })}</p>}
+                  <p className="text-xs text-muted-foreground">{user.phone ? `+91 ${user.phone.slice(0, 2)}••••${user.phone.slice(-4)}` : "Signed in with Google"} · {user.city}</p>
+                  {memberLine && <p className="font-label mt-1 text-xs font-semibold text-primary">{memberLine}</p>}
                 </div>
                 <Link role="menuitem" href="/account" onClick={() => setOpen(false)} className="mt-1 block rounded-lg px-3 py-2 font-semibold hover:bg-muted">My account</Link>
-                <Link role="menuitem" href="/flight-finder" onClick={() => setOpen(false)} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted">
+                <Link role="menuitem" href="/alerts" onClick={() => setOpen(false)} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted">
                   Price alerts <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">{alerts.length}</span>
                 </Link>
                 <button role="menuitem" onClick={() => { logout(); setOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted">Log out</button>

@@ -24,3 +24,12 @@ export const BellOn = ({ className = "" }: P) => (
     <path d="M3 8.5A9 9 0 0 1 5.5 4M21 8.5A9 9 0 0 0 18.5 4" />
   </svg>
 );
+
+/** The site's tick: a bold tick in a solid round badge. Used everywhere a tick appears so they all match. */
+const BADGE_TONE = { coral: "bg-[#e06b5a] text-white", green: "bg-price text-white", primary: "bg-primary text-white", white: "bg-white text-primary" };
+const BADGE_SIZE = { xs: ["h-4 w-4", "h-2.5 w-2.5"], sm: ["h-5 w-5", "h-3 w-3"], lg: ["h-14 w-14", "h-7 w-7"] };
+export const CheckBadge = ({ tone = "coral", size = "sm", className = "" }: { tone?: keyof typeof BADGE_TONE; size?: keyof typeof BADGE_SIZE; className?: string }) => (
+  <span className={`inline-flex shrink-0 items-center justify-center rounded-full align-[-0.2em] ${BADGE_SIZE[size][0]} ${BADGE_TONE[tone]} ${className}`} aria-hidden>
+    <svg viewBox="0 0 24 24" className={BADGE_SIZE[size][1]} fill="none" stroke="currentColor" strokeWidth={3.6} strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+  </span>
+);

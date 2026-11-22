@@ -42,7 +42,7 @@ export function findOrigin(v?: string | null): Origin | undefined {
   return ORIGINS.find((o) => o.slug === s || o.name.toLowerCase() === s);
 }
 
-export type Dest = { slug: string; city: string; intl: boolean };
+export type Dest = { slug: string; city: string; intl: boolean; country?: string };
 
 const d = (slug: string, city: string, intl = true): Dest => ({ slug, city, intl });
 
@@ -163,3 +163,32 @@ export const resolveDest = (v: string | undefined, rows: { d: string; code: stri
 /** Opens this exact round trip (route and dates) on the booking site. Only for members: the URL carries the dates. */
 export const fareLink = (originCode: string, destCode: string, dep: string, ret: string) =>
   `https://www.google.com/travel/flights?q=Flights%20to%20${destCode}%20from%20${originCode}%20on%20${dep}%20through%20${ret}`;
+
+// Regions for grouping destinations in pickers. A country maps to one region; Indian cities map by city.
+export const REGION_ORDER = [
+  "South Asia", "Southeast Asia", "East Asia", "Middle East", "Russia & Central Asia", "Europe",
+  "Africa & Indian Ocean", "Americas", "North India", "West India", "South India", "East & Islands",
+];
+const REGION_BY_COUNTRY: Record<string, string> = {
+  Nepal: "South Asia", "Sri Lanka": "South Asia", Maldives: "South Asia", Bhutan: "South Asia",
+  Thailand: "Southeast Asia", Malaysia: "Southeast Asia", Singapore: "Southeast Asia", Vietnam: "Southeast Asia",
+  Indonesia: "Southeast Asia", Philippines: "Southeast Asia", Cambodia: "Southeast Asia",
+  Japan: "East Asia", China: "East Asia", "Hong Kong": "East Asia", "South Korea": "East Asia", Taiwan: "East Asia",
+  "United Arab Emirates": "Middle East", "Saudi Arabia": "Middle East", Jordan: "Middle East", Qatar: "Middle East",
+  Oman: "Middle East", Kuwait: "Middle East", Bahrain: "Middle East", Turkey: "Middle East",
+  Russia: "Russia & Central Asia", Kazakhstan: "Russia & Central Asia", Uzbekistan: "Russia & Central Asia",
+  Georgia: "Russia & Central Asia", Azerbaijan: "Russia & Central Asia",
+  "United Kingdom": "Europe", France: "Europe", Netherlands: "Europe", Italy: "Europe", Germany: "Europe",
+  Switzerland: "Europe", Greece: "Europe", Ireland: "Europe", Spain: "Europe",
+  Kenya: "Africa & Indian Ocean", Tanzania: "Africa & Indian Ocean", Mauritius: "Africa & Indian Ocean",
+  Réunion: "Africa & Indian Ocean", Seychelles: "Africa & Indian Ocean", Zimbabwe: "Africa & Indian Ocean", Egypt: "Africa & Indian Ocean",
+  "United States": "Americas", Canada: "Americas", Mexico: "Americas", Brazil: "Americas", Argentina: "Americas", Chile: "Americas",
+};
+const INDIA_REGION: Record<string, string> = {
+  delhi: "North India", jaipur: "North India", srinagar: "North India",
+  mumbai: "West India", goa: "West India", pune: "West India", ahmedabad: "West India",
+  bangalore: "South India", chennai: "South India", hyderabad: "South India", kochi: "South India",
+  kolkata: "East & Islands", "port-blair": "East & Islands", agatti: "East & Islands",
+};
+export const regionOf = (country: string, slug = ""): string =>
+  country === "India" ? INDIA_REGION[slug] ?? "North India" : REGION_BY_COUNTRY[country] ?? "Other";

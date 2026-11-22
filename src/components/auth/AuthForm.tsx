@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Check } from "@/components/Icons";
+import { CheckBadge } from "@/components/Icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  GoogleAuthProvider, PhoneAuthProvider, RecaptchaVerifier, linkWithCredential, signInWithPhoneNumber, signInWithPopup,
+  GoogleAuthProvider, PhoneAuthProvider, RecaptchaVerifier, linkWithCredential, signInWithPhoneNumber, signInWithPopup, updateProfile,
   type ConfirmationResult,
 } from "firebase/auth";
 import { authMessage, firebaseAuth, startSession } from "@/lib/firebase/client";
 import { ORIGINS } from "@/lib/fares";
-import { EMAIL, MEMBERSHIP_PRICE, SIGNUP_LIMIT, SIGNUPS_FULL } from "@/lib/site";
+import { addMonths, EMAIL, PLANS, PLANS_SENTENCE, planById, SIGNUPS_FULL } from "@/lib/site";
+import DestinationPicker from "@/components/DestinationPicker";
 import PriceTag from "@/components/PriceTag";
 import type { Sample } from "./sample";
 import { useAuth } from "./AuthProvider";
@@ -62,17 +63,18 @@ const IconUser = () => <svg {...ico}><circle cx="12" cy="8" r="3.6" /><path d="M
 const IconPin = () => <svg {...ico}><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" /><circle cx="12" cy="10" r="2.3" /></svg>;
 
 // A field with an icon, a divider and a small label above the value.
-function Field({ icon, label, invalid, ok, children }: { icon: React.ReactNode; label: string; invalid?: boolean; ok?: boolean; children: React.ReactNode }) {
+function Field({ icon, label, invalid, ok, plain, children }: { icon: React.ReactNode; label: string; invalid?: boolean; ok?: boolean; plain?: boolean; children: React.ReactNode }) {
+  const Tag = plain ? "div" : "label";
   return (
-    <label className={`flex cursor-text items-center gap-3 rounded-xl border bg-white px-4 py-2.5 transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 ${invalid ? "border-red-500" : "border-border"}`}>
+    <Tag className={`flex cursor-text items-center gap-3 rounded-xl border bg-white px-4 py-2.5 transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 ${invalid ? "border-red-500" : "border-border"}`}>
       <span className="shrink-0 text-muted-foreground">{icon}</span>
       <span className="h-9 w-px shrink-0 bg-border" aria-hidden />
       <span className="min-w-0 flex-1 text-left">
         <span className="block text-[11px] font-medium text-muted-foreground">{label}</span>
         {children}
       </span>
-      {ok && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white" aria-hidden><Check className="h-3 w-3" /></span>}
-    </label>
+      {ok && <CheckBadge tone="green" />}
+    </Tag>
   );
 }
 const bare = "block h-6 w-full bg-transparent text-[15px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/60";
@@ -83,13 +85,13 @@ function GoogleIcon() {
   );
 }
 
-export default function AuthForm({ mode, next, sample }: { mode: Mode; next: string; sample: Sample | null }) {
+export default function AuthForm({ mode, next, sample, plan: planParam }: { mode: Mode; next: string; sample: Sample | null; plan?: string }) {
   const router = useRouter();
   const { login, user, ready } = useAuth();
   const signup = mode === "signup";
   const waitlist = signup && SIGNUPS_FULL;
 
-  const [step, setStep] = useState<"details" | "otp" | "pay" | "done">("details");
+  const [step, setStep] = useState<"details" | "otp" | "name" | "pay" | "done">("details");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("Bangalore");
@@ -98,6 +100,8 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
   const [err, setErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [method, setMethod] = useState("upi");
+  const [planId, setPlanId] = useState(planById(planParam).id);
+  const plan = planById(planId);
   const [wait, setWait] = useState(0);
   // Demo Google identity. Replace with the real Google sign-in result (name + verified email) later.
   const [google, setGoogle] = useState<{ name: string; email: string } | null>(null);
@@ -169,9 +173,27 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
     const sessionErr = await startSession().catch(() => "Could not start your session.");
     setBusy(false);
     if (sessionErr) { setErr({ otp: sessionErr }); return; }
+    // Keep the name on the Firebase account too, so it follows the person to any device.
+    const fbUser = firebaseAuth().currentUser;
+    if (signup && name.trim() && fbUser && !fbUser.displayName) await updateProfile(fbUser, { displayName: name.trim() }).catch(() => {});
     if (waitlist) { setStep("done"); return; }
     if (signup) { setStep("pay"); return; }
-    login({ name: google?.name ?? "Member", phone, city, email: google?.email });
+    // Logging in with only a mobile number: if we do not know the name yet, ask for it instead of showing "Member".
+    const known = google?.name || fbUser?.displayName || "";
+    if (!known) { setErr({}); setStep("name"); return; }
+    login({ name: known, phone, city, email: google?.email });
+    setStep("done");
+    setTimeout(() => router.push(next), 900);
+  }
+
+  async function saveName(ev: React.FormEvent) {
+    ev.preventDefault();
+    if (name.trim().length < 2) { setErr({ name: "Enter your name" }); return; }
+    setBusy(true);
+    const fbUser = firebaseAuth().currentUser;
+    if (fbUser) await updateProfile(fbUser, { displayName: name.trim() }).catch(() => {});
+    setBusy(false);
+    login({ name: name.trim(), phone, city, email: google?.email });
     setStep("done");
     setTimeout(() => router.push(next), 900);
   }
@@ -209,8 +231,8 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
     setBusy(true);
     setTimeout(() => {
       setBusy(false);
-      const renews = new Date(); renews.setFullYear(renews.getFullYear() + 1);
-      login({ name: name.trim() || "Member", phone, city, email: google?.email, since: new Date().toISOString(), renews: renews.toISOString() });
+      const nowDate = new Date();
+      login({ name: name.trim() || "Member", phone, city, email: google?.email, plan: plan.id, since: nowDate.toISOString(), renews: addMonths(nowDate, plan.months).toISOString() });
       setStep("done");
       setTimeout(() => router.push(next), 1100);
     }, 900);
@@ -220,7 +242,7 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
   const panelHead = waitlist ? "Founding spots are full." : signup ? "The dates behind every low fare." : "Your fares are waiting.";
   const panelSub = waitlist
     ? "Join the waitlist and we will message you when a spot opens."
-    : `Members see the exact dates and get price-drop alerts. ₹${MEMBERSHIP_PRICE} a year, first ${SIGNUP_LIMIT.toLocaleString("en-IN")} members.`;
+    : `Members see the exact dates and get price-drop alerts. ${PLANS_SENTENCE}.`;
   const tab = (on: boolean) => `flex h-10 items-center justify-center rounded-lg text-sm font-semibold transition ${on ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`;
   const other = (path: string) => `${path}?next=${encodeURIComponent(next)}`;
 
@@ -231,7 +253,7 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
           <div id="recaptcha-box" />
           {step === "done" ? (
             <div role="status">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl text-white"><Check className="h-7 w-7" /></div>
+              <CheckBadge tone="primary" size="lg" className="mx-auto" />
               <h1 className="mt-5 text-2xl font-extrabold tracking-tight">{waitlist ? "You are on the waitlist." : signup ? "You are in." : "Logged in."}</h1>
               <p className="mt-1 text-muted-foreground">{waitlist ? "We will message you as soon as a spot opens." : "Taking you to the fares…"}</p>
             </div>
@@ -241,11 +263,13 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
                 <p className="mb-2 text-sm font-medium text-muted-foreground">Step {stepNo} of 3</p>
               )}
               <h1 className="text-3xl font-extrabold tracking-tight">
-                {step === "pay" ? "Complete payment" : step === "otp" ? "Enter the code" : google ? "Add your mobile number" : waitlist ? "Join the waitlist" : signup ? "Create your account" : "Welcome back"}
+                {step === "pay" ? "Complete payment" : step === "name" ? "What should we call you?" : step === "otp" ? "Enter the code" : google ? "Add your mobile number" : waitlist ? "Join the waitlist" : signup ? "Create your account" : "Welcome back"}
               </h1>
               <p className="mt-2 text-[15px] text-muted-foreground">
                 {step === "pay"
-                  ? `₹${MEMBERSHIP_PRICE} for one year. Dates and alerts unlock straight after.`
+                  ? `${plan.name} of membership for ₹${plan.price}. Dates and alerts unlock straight after.`
+                  : step === "name"
+                  ? "Add your name so your account and alerts show it."
                   : step === "otp"
                   ? `We sent a 6-digit code to +91 ${phone}.`
                   : google ? "Required. We verify it with a code and use it for fare alerts."
@@ -261,13 +285,20 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
 
               {step === "pay" ? (
                 <div className="mt-8 space-y-6 text-left">
-                  <div className="flex items-baseline justify-between border-y border-border py-4">
-                    <div>
-                      <p className="font-semibold">Flight Klub membership</p>
-                      <p className="text-sm text-muted-foreground">1 year · founding member</p>
+                  <fieldset>
+                    <legend className="mb-1.5 block text-sm font-medium">Choose your plan</legend>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {PLANS.map((p) => (
+                        <label key={p.id} className={`relative flex cursor-pointer flex-col rounded-xl border px-4 py-3 transition ${planId === p.id ? "border-primary bg-secondary ring-4 ring-primary/10" : "border-border bg-white hover:border-primary/50"}`}>
+                          <input type="radio" name="plan" value={p.id} checked={planId === p.id} onChange={() => setPlanId(p.id)} className="sr-only" />
+                          <span className="text-sm font-semibold">{p.name}</span>
+                          <span className="t-title t-num text-2xl">₹{p.price}</span>
+                          <span className="text-xs text-muted-foreground">Valid for {p.name}</span>
+                          {p.months === 12 && <span className="absolute right-3 top-3 rounded-full bg-price px-2 py-0.5 text-[10px] font-bold text-white">Best value</span>}
+                        </label>
+                      ))}
                     </div>
-                    <p className="text-2xl font-extrabold">₹{MEMBERSHIP_PRICE}</p>
-                  </div>
+                  </fieldset>
                   <fieldset>
                     <legend className="mb-1.5 block text-sm font-medium">Pay with</legend>
                     <div className="grid grid-cols-3 gap-2">
@@ -279,7 +310,7 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
                       ))}
                     </div>
                   </fieldset>
-                  <button onClick={pay} disabled={busy} className={primaryBtn}>{busy ? "Processing…" : `Pay ₹${MEMBERSHIP_PRICE}`}</button>
+                  <button onClick={pay} disabled={busy} className={primaryBtn}>{busy ? "Processing…" : `Pay ₹${plan.price}`}</button>
                   <p className="text-center text-xs text-muted-foreground">Demo checkout: no payment is taken yet.</p>
                 </div>
               ) : step === "details" ? (
@@ -314,10 +345,17 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
                       : <p className="mt-1 text-xs text-muted-foreground">Required. We will text you a code to confirm it.</p>}
                   </div>
                   {signup && (
-                    <Field icon={<IconPin />} label="Flying from">
-                      <select id="city" value={city} onChange={(e) => setCity(e.target.value)} className={`${bare} cursor-pointer`}>
-                        {ORIGINS.map((o) => <option key={o.slug}>{o.name}</option>)}
-                      </select>
+                    <Field icon={<IconPin />} label="Flying from" plain>
+                      <DestinationPicker
+                        variant="bare"
+                        value={ORIGINS.find((o) => o.name === city)?.slug ?? ""}
+                        onChange={(slug) => { const o = ORIGINS.find((x) => x.slug === slug); if (o) setCity(o.name); }}
+                        anywhere={null}
+                        grouped={false}
+                        showCountry={false}
+                        searchPlaceholder="Search your city"
+                        options={ORIGINS.map((o) => ({ slug: o.slug, city: o.name, country: "India", code: o.code }))}
+                      />
                     </Field>
                   )}
                   {signup && (
@@ -348,6 +386,16 @@ export default function AuthForm({ mode, next, sample }: { mode: Mode; next: str
                   <p className="pt-4 text-center text-xs leading-relaxed text-muted-foreground">
                     Flight Klub finds the cheapest months and destinations from your city. A verified mobile number keeps your alerts and account safe.
                   </p>
+                </form>
+              ) : step === "name" ? (
+                <form onSubmit={saveName} noValidate className="mt-8 space-y-4 text-left">
+                  <div>
+                    <Field icon={<IconUser />} label="Full name" invalid={!!err.name} ok={name.trim().length >= 2}>
+                      <input autoFocus autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="As on your ID" className={bare} aria-invalid={!!err.name} />
+                    </Field>
+                    {err.name && <p className="mt-1 text-sm text-red-600" role="alert">{err.name}</p>}
+                  </div>
+                  <button disabled={busy} className={primaryBtn}>{busy ? "Saving…" : "Continue"}</button>
                 </form>
               ) : (
                 <form onSubmit={verify} className="mt-8 space-y-5">

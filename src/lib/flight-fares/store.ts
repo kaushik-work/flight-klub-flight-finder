@@ -118,9 +118,9 @@ export async function getMonthMins(): Promise<{ month: string; from: number }[]>
 }
 
 /** Destinations present in the data, so new ones (for example Goa) appear without a code change. */
-export async function getDestinations(): Promise<{ slug: string; city: string; intl: boolean }[]> {
+export async function getDestinations(): Promise<{ slug: string; city: string; country: string; intl: boolean }[]> {
   const routes = await getRoutes();
-  const seen = new Map<string, { slug: string; city: string; intl: boolean }>();
-  for (const r of routes) if (!seen.has(r.d)) seen.set(r.d, { slug: r.d, city: r.city, intl: r.intl });
+  const seen = new Map<string, { slug: string; city: string; country: string; intl: boolean }>();
+  for (const r of routes) if (!seen.has(r.d)) seen.set(r.d, { slug: r.d, city: r.city, country: r.country, intl: r.intl });
   return [...seen.values()].sort((a, b) => a.city.localeCompare(b.city));
 }

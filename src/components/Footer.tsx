@@ -13,66 +13,47 @@ export default async function Footer() {
   const intl = all.filter((f) => f.intl);
   const dom = all.filter((f) => !f.intl);
   return (
-    <footer className="mt-16 bg-[#040609] text-sm text-[#f5f5f5]">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+    <footer className="mt-12 bg-[#040609] text-sm text-[#f5f5f5]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 lg:grid-cols-[1fr_2fr]">
         <div>
           <Image src="/flight-klub.svg" alt="Flight Klub" width={160} height={80} className="h-10 w-auto rounded bg-white p-1" />
           <p className="mt-4 max-w-xs text-[#88909c]">
-            Planning a trip? Flight Klub shows you the cheapest destinations and the cheapest months to fly from your
-            city, so you can pick your dates around the best fare and save on every flight.
+            The cheapest destinations and months to fly from your city, so you can plan around the best fare.
           </p>
           <ul className="mt-5 space-y-2">
             <li><a href={`tel:${PHONE_TEL}`} className={link}>{PHONE_DISPLAY}</a></li>
             <li><a href={`mailto:${EMAIL}`} className={link}>{EMAIL}</a></li>
-            <li><Link href="/blog" className={link}>Blog</Link></li>
-            <li><a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className={link}>Chat on WhatsApp</a></li>
-            <li><a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className={link}>Instagram</a></li>
+            <li className="flex gap-4">
+              <Link href="/blog" className={link}>Blog</Link>
+              <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className={link}>WhatsApp</a>
+              <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className={link}>Instagram</a>
+            </li>
           </ul>
-          <address className="mt-5 max-w-xs not-italic text-[#88909c]">
-            <span className="font-label block text-xs font-semibold uppercase tracking-wider text-white">Office</span>
-            <span className="mt-2 block">{ADDRESS}</span>
-            <span className="mt-2 block">GSTIN: {GSTIN}</span>
+          <address className="mt-5 max-w-xs text-xs not-italic leading-relaxed text-[#88909c]">
+            {ADDRESS}
+            <span className="mt-1 block">GSTIN: {GSTIN}</span>
           </address>
         </div>
 
-        <nav aria-label="Flights by city">
-          <h3 className={head}>Flights from</h3>
-          <ul className="mt-4 space-y-2">
-            {ORIGINS.map((o) => (
-              <li key={o.slug}>
-                <Link href={`/flight-finder?from=${o.slug}`} className={link}>
-                  Flights from {o.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <nav aria-label="International destinations">
-          <h3 className={head}>International destinations</h3>
-          <ul className="mt-4 space-y-2">
-            {intl.map((f) => (
-              <li key={f.slug}>
-                <Link href={`/flight-finder?to=${f.slug}`} className={link}>
-                  Flights to {f.city}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <nav aria-label="Domestic destinations">
-          <h3 className={head}>Domestic destinations</h3>
-          <ul className="mt-4 space-y-2">
-            {dom.map((f) => (
-              <li key={f.slug}>
-                <Link href={`/flight-finder?to=${f.slug}`} className={link}>
-                  Flights to {f.city}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {/* Links as compact chips instead of long columns */}
+        <div className="space-y-6">
+          {[
+            ["Flights from", ORIGINS.map((o) => ({ href: `/flight-finder?from=${o.slug}`, text: o.name }))],
+            ["International destinations", intl.map((f) => ({ href: `/flight-finder?to=${f.slug}`, text: f.city }))],
+            ["Domestic destinations", dom.map((f) => ({ href: `/flight-finder?to=${f.slug}`, text: f.city }))],
+          ].map(([title, items]) => (
+            <nav key={title as string} aria-label={title as string}>
+              <h3 className={head}>{title as string}</h3>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {(items as { href: string; text: string }[]).map((i) => (
+                  <li key={i.href}>
+                    <Link href={i.href} className="inline-block rounded-full border border-white/10 px-3 py-1 text-xs text-[#b6bcc6] transition hover:border-white/40 hover:text-white">{i.text}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
       </div>
       <div className="border-t border-white/10">
         <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-[#88909c]">© 2026 Flight Klub · GSTIN {GSTIN}</p>

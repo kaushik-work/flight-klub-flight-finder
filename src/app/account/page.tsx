@@ -12,7 +12,7 @@ export default function AccountPage() {
   return (
     <>
       <Header />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-16 sm:px-8">
         <AccountView />
       </main>
       <Footer />

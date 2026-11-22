@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useState } from "react";
+import { updateProfile } from "firebase/auth";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ArrowRight, Bell, Check } from "@/components/Icons";
-import { destName, ORIGINS } from "@/lib/fares";
+import { firebaseAuth } from "@/lib/firebase/client";
+import DestinationPicker from "@/components/DestinationPicker";
+import { ArrowRight, Bell, CheckBadge } from "@/components/Icons";
+import { inr, ORIGINS } from "@/lib/fares";
+import { PLANS } from "@/lib/site";
 import { useHydrated, useNow } from "@/lib/useHydrated";
 
 const DAY = 86_400_000;
@@ -52,6 +56,9 @@ export default function AccountView() {
   const start = user.since ? new Date(user.since).getTime() : end ? end - 365 * DAY : null;
   const left = end ? Math.ceil((end - now) / DAY) : null;
   const pct = end && start ? Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100)) : 0;
+  const months = start && end ? Math.max(1, Math.round((end - start) / (30.44 * DAY))) : null;
+  const planInfo = PLANS.find((p) => p.id === user.plan);
+  const planName = planInfo ? planInfo.name : months ? `${months} month${months === 1 ? "" : "s"}` : "";
   const status =
     left === null ? { t: "No active membership", c: "bg-white/20 text-white" }
     : left <= 0 ? { t: "Expired", c: "bg-red-100 text-red-700" }
@@ -69,6 +76,8 @@ export default function AccountView() {
     setErr(er);
     if (Object.keys(er).length) return;
     auth.updateUser({ name: name.trim(), city, email: email.trim() || undefined });
+    const fb = firebaseAuth().currentUser;
+    if (fb) void updateProfile(fb, { displayName: name.trim() }).catch(() => {});
     setEditing(false);
     setSaved(true);
   }
@@ -85,22 +94,34 @@ export default function AccountView() {
             <div className="relative h-[11.5rem] bg-gradient-to-br from-[#8b1d24] to-[#c2453f] p-6 text-white">
               <span className="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full border-[26px] border-white/15" aria-hidden />
               <p id="membership" className="t-label !text-[11px] text-white/80">Flight Klub membership</p>
-              <p className="t-title mt-2 text-3xl">{left === null ? "Free account" : "Founding member"}</p>
+              <p className="t-title mt-2 text-3xl">{left === null ? "Free account" : "Member"}</p>
               <p className="mt-1 text-sm text-white/85">{user.name}</p>
               <span className={`absolute bottom-5 left-6 rounded-full px-3 py-1 text-xs font-bold ${status.c}`}>{status.t}</span>
-              <span className="absolute bottom-5 right-6 text-sm font-semibold text-white/90">₹399 / year</span>
+              <span className="absolute bottom-5 right-6 text-sm font-semibold text-white/90">{planInfo ? `₹${planInfo.price} · ${planInfo.name}` : planName}</span>
             </div>
             <div className="ticket-perf p-6">
               {end ? (
                 <>
                   <div className="flex items-end justify-between gap-4">
+                    {/* More than 30 days: say when it expires. 30 days or fewer: say how long it stays valid. */}
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground">Valid till</p>
-                      <p className="t-title t-num text-3xl">{fmt(user.renews!)}</p>
+                      {left! > 30 ? (
+                        <>
+                          <p className="text-xs font-medium text-muted-foreground">Expires on</p>
+                          <p className="t-title t-num text-3xl">{fmt(user.renews!)}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs font-medium text-muted-foreground">Validity</p>
+                          <p className={`t-title t-num text-3xl ${left! > 0 ? "text-amber-700" : "text-red-700"}`}>
+                            {left! > 0 ? `Valid for ${left} more day${left === 1 ? "" : "s"}` : "Expired"}
+                          </p>
+                        </>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className="t-title t-num text-3xl text-price">{Math.max(0, left!)}</p>
-                      <p className="text-xs text-muted-foreground">days left</p>
+                      <p className={`t-title t-num text-3xl ${left! > 30 ? "text-price" : left! > 0 ? "text-amber-700" : "text-red-700"}`}>{Math.max(0, left!)}</p>
+                      <p className="text-xs text-muted-foreground">{Math.max(0, left!) === 1 ? "day left" : "days left"}</p>
                     </div>
                   </div>
                   <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Membership year used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
@@ -108,7 +129,7 @@ export default function AccountView() {
                   </div>
                   <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-xl bg-muted px-3 py-2.5"><dt className="text-[11px] text-muted-foreground">Member since</dt><dd className="mt-0.5 font-semibold">{start ? fmt(new Date(start).toISOString()) : "-"}</dd></div>
-                    <div className="rounded-xl bg-muted px-3 py-2.5"><dt className="text-[11px] text-muted-foreground">Plan</dt><dd className="mt-0.5 font-semibold">1 year, ₹399</dd></div>
+                    <div className="rounded-xl bg-muted px-3 py-2.5"><dt className="text-[11px] text-muted-foreground">Plan</dt><dd className="mt-0.5 font-semibold">{planInfo ? `${planInfo.name}, ₹${planInfo.price}` : planName || "-"}</dd></div>
                   </dl>
                   <p className="mt-4 text-xs text-muted-foreground">
                     {left! > 30 ? `Your membership runs until ${fmt(user.renews!)}.` : left! > 0 ? "Your membership is about to end. Renewal will open here." : "Your membership has ended, so dates and alerts are locked."}
@@ -121,7 +142,7 @@ export default function AccountView() {
               )}
               <ul className="mt-5 space-y-2 border-t border-border pt-5 text-sm">
                 {["Exact travel dates on every fare", "Price-drop alerts on your routes", "Direct link to book each fare"].map((t) => (
-                  <li key={t} className="flex items-center gap-2"><Check className="text-price" />{t}</li>
+                  <li key={t} className="flex items-center gap-2.5"><CheckBadge tone="green" />{t}</li>
                 ))}
               </ul>
             </div>
@@ -138,7 +159,7 @@ export default function AccountView() {
                   <button onClick={startEdit} className="font-label rounded-lg border border-border px-4 py-2 text-sm font-semibold transition hover:border-primary hover:text-primary">Edit profile</button>
                 )}
               </div>
-              {saved && !editing && <p className="mt-3 flex items-center gap-2 rounded-xl bg-price-soft px-3 py-2 text-sm font-semibold text-price" role="status"><Check />Profile saved</p>}
+              {saved && !editing && <p className="mt-3 flex items-center gap-2 rounded-xl bg-price-soft px-3 py-2 text-sm font-semibold text-price" role="status"><CheckBadge tone="green" size="xs" />Profile saved</p>}
 
               {editing ? (
                 <form onSubmit={save} noValidate className="mt-5 space-y-4">
@@ -153,10 +174,16 @@ export default function AccountView() {
                     {err.email && <p className="mt-1 text-sm text-red-600" role="alert">{err.email}</p>}
                   </div>
                   <div>
-                    <label htmlFor="p-city" className={label}>Flying from</label>
-                    <select id="p-city" value={city} onChange={(e) => setCity(e.target.value)} className={input}>
-                      {ORIGINS.map((o) => <option key={o.slug}>{o.name}</option>)}
-                    </select>
+                    <span className={label}>Flying from</span>
+                    <DestinationPicker
+                      value={ORIGINS.find((o) => o.name === city)?.slug ?? ""}
+                      onChange={(slug) => { const o = ORIGINS.find((x) => x.slug === slug); if (o) setCity(o.name); }}
+                      anywhere={null}
+                      grouped={false}
+                      showCountry={false}
+                      searchPlaceholder="Search your city"
+                      options={ORIGINS.map((o) => ({ slug: o.slug, city: o.name, country: "India", code: o.code }))}
+                    />
                   </div>
                   <div>
                     <span className={label}>Mobile number</span>
@@ -176,6 +203,7 @@ export default function AccountView() {
                     ["Mobile", `+91 ${user.phone}`, "Verified"],
                     ["Email", user.email || "Not added"],
                     ["Flying from", user.city],
+                    ["Member since", start ? fmt(new Date(start).toISOString()) : "Not a member yet"],
                   ].map(([k, v, tag]) => (
                     <div key={k} className="flex items-center justify-between gap-4 py-3">
                       <dt className="text-muted-foreground">{k}</dt>
@@ -196,19 +224,23 @@ export default function AccountView() {
               {alerts.length === 0 ? (
                 <p className="mt-3 text-sm text-muted-foreground">
                   No alerts yet. Tap the bell on any fare in the{" "}
-                  <Link href="/flight-finder" className="font-semibold text-primary underline underline-offset-4">flight finder</Link>.
+                  <Link href="/flight-finder" className="font-semibold text-primary underline underline-offset-4">flight finder</Link>{" "}
+                  and set the price you are waiting for.
                 </p>
               ) : (
-                <ul className="mt-4 divide-y divide-border">
-                  {alerts.map((a) => (
-                    <li key={a} className="flex items-center justify-between gap-3 py-3 text-sm">
-                      <Link href={`/flight-finder?from=${ORIGINS.find((o) => o.name === user.city)?.slug ?? "bangalore"}&to=${a}`} className="font-semibold hover:text-primary">
-                        {user.city} to {destName(a)}<ArrowRight className="ml-1.5 text-muted-foreground" />
-                      </Link>
-                      <button onClick={() => auth.toggleAlert(a)} className="font-label rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-primary">Remove</button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="mt-4 divide-y divide-border">
+                    {alerts.slice(0, 3).map((a) => (
+                      <li key={a.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                        <span className="font-semibold">{ORIGINS.find((o) => o.slug === a.origin)?.name ?? a.origin} to {a.city}</span>
+                        <span className="t-num font-bold text-price">{inr(a.target)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/alerts" className="font-label mt-3 inline-block text-sm font-semibold text-primary hover:underline">
+                    {alerts.length > 3 ? `See all ${alerts.length} alerts` : "Manage alerts"}<ArrowRight className="ml-1.5" />
+                  </Link>
+                </>
               )}
             </div>
           </section>

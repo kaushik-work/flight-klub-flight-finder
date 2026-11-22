@@ -3,13 +3,14 @@
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "@/components/Icons";
 import { useState } from "react";
+import DestinationPicker from "@/components/DestinationPicker";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { DESTINATIONS, ORIGINS } from "@/lib/fares";
 
 const field =
   "font-label h-12 w-full appearance-none rounded-xl border border-border bg-white pl-4 pr-10 text-sm font-semibold outline-none transition hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10";
 
-export default function HeroSearch({ nightOptions = [3, 5, 7], destinations }: { nightOptions?: number[]; destinations?: { slug: string; city: string; intl: boolean }[] }) {
+export default function HeroSearch({ nightOptions = [3, 5, 7], destinations }: { nightOptions?: number[]; destinations?: { slug: string; city: string; country?: string; intl: boolean }[] }) {
   const router = useRouter();
   const { origin: near, setUserOrigin } = useHomeOrigin();
   const [picked, setFrom] = useState<string | null>(null);
@@ -44,19 +45,27 @@ export default function HeroSearch({ nightOptions = [3, 5, 7], destinations }: {
       ))}
     </div>
     <form onSubmit={go} className="grid gap-4 sm:grid-cols-2 sm:items-end lg:grid-cols-[1fr_1fr_auto_auto]">
-      <label className="block">
+      <div>
         <span className={label}>Flying from</span>
-        <select className={field} value={from} onChange={(e) => setFrom(e.target.value)}>
-          {ORIGINS.map((o) => <option key={o.slug} value={o.slug}>{o.name}</option>)}
-        </select>
-      </label>
-      <label className="block">
+        <DestinationPicker
+          value={from}
+          onChange={(slug) => slug && setFrom(slug)}
+          anywhere={null}
+          grouped={false}
+          showCountry={false}
+          searchPlaceholder="Search your city"
+          options={ORIGINS.map((o) => ({ slug: o.slug, city: o.name, country: "India", code: o.code }))}
+        />
+      </div>
+      <div>
         <span className={label}>Going to</span>
-        <select className={field} value={to} onChange={(e) => setTo(e.target.value)}>
-          <option value="">{intl ? "Anywhere abroad (show me the cheapest)" : "Anywhere in India (show me the cheapest)"}</option>
-          {list.map((f) => <option key={f.slug} value={f.slug}>{f.city}</option>)}
-        </select>
-      </label>
+        <DestinationPicker
+          value={to}
+          onChange={setTo}
+          options={list.map((f) => ({ slug: f.slug, city: f.city, country: f.country ?? (f.intl ? "International" : "India") }))}
+          anywhere={intl ? "Anywhere abroad" : "Anywhere in India"}
+        />
+      </div>
       <div>
         <span className={label}>Trip length</span>
         <div className="flex h-12 gap-1 rounded-xl border border-border bg-muted p-1">

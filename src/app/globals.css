@@ -15,6 +15,14 @@
   --radius: 0.75rem;
 }
 
+@theme {
+  /* Poppins reads heavy, so every weight utility is one step lighter than its name. */
+  --font-weight-medium: 400;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -62,9 +70,9 @@ body {
 
 /* --- Typography: Figtree only. Headings tight and balanced, labels spaced caps. --- */
 h1, h2, h3, h4 { letter-spacing: -0.02em; text-wrap: balance; }
-.t-display { font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
-.t-title { font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
-.t-label { font-weight: 700; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; }
+.t-display { font-weight: 600; letter-spacing: -0.035em; line-height: 1.02; }
+.t-title { font-weight: 600; letter-spacing: -0.02em; line-height: 1.12; }
+.t-label { font-weight: 600; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; }
 .t-num { font-variant-numeric: tabular-nums; }
 
 /* --- The ticket. Outer .ticket-shell carries the shadow and the lift; inner .ticket is the paper with
@@ -150,4 +158,29 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; text-wrap: balance; }
 /* Two passes per row from 1024px: each card is narrower, so the stub goes back under the body as a slim strip. */
 @media (min-width: 1024px) {
   .ticket-pass { --stub-h: 9rem; }
+}
+
+/* --- Joyful motion for the hero: floating cards, drifting glows, a ticker, twinkles and a shine sweep. --- */
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes drift { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(40px, -30px) scale(1.12); } }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes twinkle { 0%, 100% { opacity: 0.15; transform: scale(0.7) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(20deg); } }
+@keyframes shine { 0% { transform: translateX(-130%) skewX(-18deg); } 55%, 100% { transform: translateX(260%) skewX(-18deg); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(224 107 90 / 0.55); } 70%, 100% { box-shadow: 0 0 0 14px rgb(224 107 90 / 0); } }
+.float { animation: float 5.5s ease-in-out infinite; }
+.drift { animation: drift 14s ease-in-out infinite; }
+.marquee { display: flex; width: max-content; animation: marquee 48s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
+.twinkle { animation: twinkle 3.2s ease-in-out infinite; }
+.shine::after {
+  content: ""; position: absolute; inset: 0; width: 35%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: shine 5.5s ease-in-out infinite; pointer-events: none;
+}
+.squiggle path { stroke-dasharray: 220; stroke-dashoffset: 220; animation: draw 1.1s 0.5s ease-out forwards; }
+.pulse-ring { animation: pulse-ring 2.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .float, .drift, .marquee, .twinkle, .shine::after, .pulse-ring { animation: none; }
+  .squiggle path { animation: none; stroke-dashoffset: 0; }
 }

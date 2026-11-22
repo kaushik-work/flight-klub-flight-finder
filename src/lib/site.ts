@@ -18,8 +18,25 @@ export const jsonLd = (data: object) => ({
 // Limited paid membership. SIGNUPS_TAKEN must come from a real count (env now, database later).
 // While it is unset we only say "first 1,000 members" and never show a made-up remaining number.
 export const SIGNUP_LIMIT = 1000;
-export const MEMBERSHIP_PRICE = 399; // INR per year
-export const MEMBERSHIP_LABEL = "₹399/year";
+// Two plans. Prices are in rupees and the validity runs from the day of payment.
+export const PLANS = [
+  { id: "3m", months: 3, price: 399, name: "3 months" },
+  { id: "12m", months: 12, price: 999, name: "12 months" },
+] as const;
+export type PlanId = (typeof PLANS)[number]["id"];
+export const planById = (id?: string | null) => PLANS.find((p) => p.id === id) ?? PLANS[1];
+export const MEMBERSHIP_PRICE = PLANS[0].price; // the lowest price, for "from" copy
+export const MEMBERSHIP_LABEL = "from ₹399";
+export const PLANS_SENTENCE = "₹399 for 3 months or ₹999 for 12 months";
+/** A date `months` months after `from`, clamped to the end of a shorter month. */
+export function addMonths(from: Date, months: number): Date {
+  const d = new Date(from);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return d;
+}
 const taken = process.env.NEXT_PUBLIC_SIGNUPS_TAKEN;
 export const SIGNUPS_TAKEN = taken && /^\d+$/.test(taken) ? Math.min(Number(taken), SIGNUP_LIMIT) : null;
 export const SPOTS_LEFT = SIGNUPS_TAKEN === null ? null : SIGNUP_LIMIT - SIGNUPS_TAKEN;

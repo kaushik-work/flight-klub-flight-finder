@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Bell, BellOn, Lock } from "@/components/Icons";
+import DestinationPicker, { type DestOption } from "@/components/DestinationPicker";
 import PriceMeter from "@/components/PriceMeter";
 import PriceTag from "@/components/PriceTag";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { alertId, useAuth } from "@/components/auth/AuthProvider";
+import AlertDialog, { type AlertRoute } from "@/components/alerts/AlertDialog";
 import { useHydrated } from "@/lib/useHydrated";
 import {
   ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, inr, monthLabel,
@@ -18,25 +20,6 @@ const seg = (on: boolean) =>
     on ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
   }`;
 
-const field =
-  "font-label h-12 w-full appearance-none rounded-xl border border-border bg-white pl-4 pr-10 text-sm font-semibold text-foreground outline-none transition hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/10";
-
-function Chevron() {
-  return (
-    <svg className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="relative block">{children}<Chevron /></span>
-    </label>
-  );
-}
 
 /** One row per destination: the cheapest that matches. */
 function cheapest(rows: Row[]) {
@@ -71,7 +54,7 @@ export default function FlightFinder({
   const ready = hydrated && auth.ready;
   const user = hydrated ? auth.user : null;
   const alerts = hydrated ? auth.alerts : [];
-  const { toggleAlert } = auth;
+  const [alertFor, setAlertFor] = useState<AlertRoute | null>(null);
   const { origin: near, setUserOrigin } = useHomeOrigin();
 
   // No city in the URL: use the nearest airport once it is known.
@@ -91,7 +74,15 @@ export default function FlightFinder({
   const pool = useMemo(() => rows.filter((r) => r.intl === intl), [rows, intl]);
   const months = useMemo(() => [...new Set(rows.map((r) => r.month))].sort(), [rows]);
   const nightOpts = useMemo(() => [...new Set(rows.map((r) => r.nights))].sort((a, b) => a - b), [rows]);
-  const dests = useMemo(() => [...new Map(pool.map((r) => [r.d, r.city])).entries()].sort((a, b) => a[1].localeCompare(b[1])), [pool]);
+  const destOptions = useMemo<DestOption[]>(() => {
+    const m = new Map<string, DestOption>();
+    for (const r of pool) {
+      const x = m.get(r.d);
+      if (!x) m.set(r.d, { slug: r.d, city: r.city, country: r.country, from: r.price });
+      else if (r.price < (x.from ?? Infinity)) x.from = r.price;
+    }
+    return [...m.values()];
+  }, [pool]);
   const counts = useMemo(() => ({
     intl: new Set(rows.filter((r) => r.intl).map((r) => r.d)).size,
     dom: new Set(rows.filter((r) => !r.intl).map((r) => r.d)).size,
@@ -130,6 +121,11 @@ export default function FlightFinder({
     return timed.length > 1 ? timed.reduce((m, f) => ((f.mins ?? Infinity) < (m.mins ?? Infinity) ? f : m)).d : null;
   }, [results]);
 
+  const hasAlert = (dest: string) => alerts.some((a) => a.id === alertId(origin.slug, dest));
+  function openAlert(f: Row) {
+    setAlertFor({ origin: origin.slug, originName: origin.name, dest: f.d, city: f.city, code: f.code, price: f.price, avg: stats[f.d]?.avg });
+  }
+
   const lastSeen = useMemo(() => rows.reduce((m, r) => (r.seen > m ? r.seen : m), ""), [rows]);
 
   return (
@@ -142,22 +138,23 @@ export default function FlightFinder({
       </section>
 
       <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 sm:items-end lg:grid-cols-[1fr_1fr_auto]">
-        <Field label="Flying from">
-          <select
-            className={field}
+        <div>
+          <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Flying from</span>
+          <DestinationPicker
             value={origin.slug}
             disabled={moving}
-            onChange={(e) => { setUserOrigin(e.target.value); startMove(() => router.push(`/flight-finder?from=${e.target.value}`)); }}
-          >
-            {ORIGINS.map((o) => <option key={o.slug} value={o.slug}>{o.name}</option>)}
-          </select>
-        </Field>
-        <Field label="Going to">
-          <select className={field} value={dest} onChange={(e) => setDest(e.target.value)}>
-            <option value="">Anywhere</option>
-            {dests.map(([slug, city]) => <option key={slug} value={slug}>{city}</option>)}
-          </select>
-        </Field>
+            anywhere={null}
+            grouped={false}
+            showCountry={false}
+            searchPlaceholder="Search your city"
+            options={ORIGINS.map((o) => ({ slug: o.slug, city: o.name, country: "India", code: o.code }))}
+            onChange={(slug) => { if (!slug) return; setUserOrigin(slug); startMove(() => router.push(`/flight-finder?from=${slug}`)); }}
+          />
+        </div>
+        <div>
+          <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Going to</span>
+          <DestinationPicker value={dest} onChange={setDest} options={destOptions} anywhere={intl ? "Anywhere abroad" : "Anywhere in India"} />
+        </div>
         <div>
           <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Trip length</span>
           <div className="flex h-12 items-center gap-1 rounded-xl border border-border bg-muted p-1">
@@ -208,11 +205,11 @@ export default function FlightFinder({
           <p className="text-sm text-muted-foreground">{results.length} destinations</p>
           {ready && !user && (
             <Link href="/signup?next=/flight-finder" className="font-label flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground transition hover:bg-primary hover:text-primary-foreground">
-              <Lock className="mr-1.5" />Members unlock exact dates and price-drop alerts · ₹399/year<ArrowRight className="ml-1.5" />
+              <Lock className="mr-1.5" />Members unlock exact dates and price-drop alerts · from ₹399<ArrowRight className="ml-1.5" />
             </Link>
           )}
           {user && alerts.length > 0 && (
-            <p className="font-label text-xs font-semibold text-primary"><BellOn className="mr-1" />{alerts.length} price alert{alerts.length > 1 ? "s" : ""} on</p>
+            <Link href="/alerts" className="font-label text-xs font-semibold text-primary hover:underline"><BellOn className="mr-1" />{alerts.length} price alert{alerts.length > 1 ? "s" : ""} on<ArrowRight className="ml-1.5" /></Link>
           )}
         </div>
 
@@ -298,20 +295,15 @@ export default function FlightFinder({
                           >
                             View fare<ArrowUpRight className="ml-1.5" />
                           </a>
-                          <button
-                            onClick={() => toggleAlert(f.d)}
-                            aria-pressed={alerts.includes(f.d)}
-                            aria-label={alerts.includes(f.d) ? "Turn off price alert" : "Alert me when the price drops"}
-                            title={alerts.includes(f.d) ? "Alert on" : "Alert me"}
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg transition ${alerts.includes(f.d) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
-                          >
-                            {alerts.includes(f.d) ? <BellOn className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
-                          </button>
+                          <AlertBell on={hasAlert(f.d)} onClick={() => openAlert(f)} />
                         </div>
                       ) : (
-                        <Link href="/signup?next=/flight-finder" className="font-label flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground transition hover:opacity-90 lg:w-auto lg:whitespace-nowrap lg:px-6">
-                          Unlock dates<ArrowRight className="ml-1.5" />
-                        </Link>
+                        <div className="flex w-full gap-2 lg:w-auto">
+                          <Link href="/signup?next=/flight-finder" className="font-label flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground transition hover:opacity-90">
+                            Unlock dates<ArrowRight className="ml-1.5" />
+                          </Link>
+                          <AlertBell on={false} locked onClick={() => openAlert(f)} />
+                        </div>
                       )}
                       <div className="hidden md:block lg:hidden" aria-hidden>
                         <div className="barcode h-8 rounded-sm" />
@@ -328,6 +320,22 @@ export default function FlightFinder({
           Round-trip fares in rupees{lastSeen ? `, last checked ${formatDay(lastSeen)}` : ""}. Prices change often, so confirm the final fare before you book.
         </p>
       </section>
+      {alertFor && <AlertDialog route={alertFor} onClose={() => setAlertFor(null)} />}
     </main>
+  );
+}
+
+/** The bell on each fare. Solid with ringing marks when an alert is set, a lock when alerts are for members only. */
+function AlertBell({ on, locked = false, onClick }: { on: boolean; locked?: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={on ? "Edit your price alert" : locked ? "Price alerts, members only" : "Set a price alert"}
+      title={on ? "Alert on" : "Set a price alert"}
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
+    >
+      {on ? <BellOn className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+      {locked && <Lock className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white p-0.5 text-primary shadow" />}
+    </button>
   );
 }

@@ -10,14 +10,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-async function Form({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
+async function Form({ searchParams }: { searchParams: Promise<{ next?: string; plan?: string }> }) {
+  const { next, plan } = await searchParams;
   const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "/flight-finder";
   const sample = pickSample(await getRoutes());
-  return <AuthForm mode="signup" next={safe} sample={sample} />;
+  return <AuthForm mode="signup" next={safe} sample={sample} plan={plan} />;
 }
 
-export default function Page({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+export default function Page({ searchParams }: { searchParams: Promise<{ next?: string; plan?: string }> }) {
   return (
     <>
       <Header />

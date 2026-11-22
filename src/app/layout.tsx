@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Figtree } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { SITE_DESC, SITE_NAME, SITE_URL } from "@/lib/site";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { LocationProvider } from "@/components/location/LocationProvider";
 import "./globals.css";
 
-const sans = Figtree({ variable: "--font-sans", subsets: ["latin"], display: "swap" });
+const sans = Poppins({ variable: "--font-sans", subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
