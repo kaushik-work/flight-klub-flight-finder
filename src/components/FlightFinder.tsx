@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Bell, BellOn, Lock } from "@/components/Icons";
 import DestinationPicker, { type DestOption } from "@/components/DestinationPicker";
-import PriceMeter from "@/components/PriceMeter";
 import PriceTag from "@/components/PriceTag";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
@@ -229,88 +228,65 @@ export default function FlightFinder({
               const st = statFor(f);
               return (
                 <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal">
-                  <div className="ticket ticket-pass md:flex lg:block">
-                    <div className="min-w-0 flex-1 p-5 md:p-6">
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
-                        {f.d === cheapestId && results.length > 1 && <span className="rounded-full bg-price px-2.5 py-1 text-white">Cheapest</span>}
-                        {f.d === fastestId && <span className="rounded-full bg-[#e4e9f2] px-2.5 py-1 text-[#1f2a44]">Fastest</span>}
-                        {f.stops === 0 && <span className="rounded-full bg-price-soft px-2.5 py-1 text-price">Direct</span>}
-                      </div>
-
-                      {/* Where: source and destination are the loudest thing after the price. */}
-                      <div className="mt-4 flex items-center gap-3">
+                  <div className="ticket" style={{ "--y": "calc(100% - 5.25rem)" } as CSSProperties}>
+                    <div className="p-5">
+                      {/* Where: one clear name, the rest muted. */}
+                      <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-label text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">From</p>
-                          <p className="t-title truncate text-2xl sm:text-3xl">{origin.name}</p>
+                          <h3 className="t-title truncate text-2xl">{f.city}</h3>
+                          <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                            From {origin.name} · {f.code}{dur ? ` · ${dur}` : ""} · {f.stops === 0 ? "Non-stop" : stops ?? "Round trip"}
+                          </p>
                         </div>
-                        <div className="flex min-w-0 flex-1 flex-col items-center text-[11px] font-medium text-muted-foreground" aria-hidden>
-                          <span>{dur ?? "Round trip"}</span>
-                          <span className="flex w-full items-center gap-1 text-muted-foreground/50">
-                            <span className="h-1.5 w-1.5 rounded-full border border-current" />
-                            <span className="h-px flex-1 border-t border-dashed border-current" />
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" transform="rotate(90 12 12)" /></svg>
-                            <span className="h-px flex-1 border-t border-dashed border-current" />
-                            <span className="h-1.5 w-1.5 rounded-full border border-current" />
-                          </span>
-                          <span>{f.stops === 0 ? "Non-stop" : stops ?? "Round trip"}</span>
-                        </div>
-                        <div className="min-w-0 text-right">
-                          <p className="font-label text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">To · {f.code}</p>
-                          <p className="t-title truncate text-2xl sm:text-3xl">{f.city}</p>
+                        <div className="flex shrink-0 gap-1.5 text-[11px] font-semibold">
+                          {f.d === cheapestId && results.length > 1 && <span className="rounded-md bg-price px-2 py-1 text-white">Cheapest</span>}
+                          {f.d === fastestId && <span className="rounded-md bg-[#e4e9f2] px-2 py-1 text-[#1f2a44]">Fastest</span>}
                         </div>
                       </div>
 
-                      {/* When */}
-                      <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-secondary px-4 py-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M8 3v4M16 3v4M3.5 10h17" /></svg>
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-[11px] text-muted-foreground">Travel dates · {f.nights} nights</p>
-                            {user ? (
-                              <p className="t-num t-title truncate text-xl">{formatRange(f.dep, f.ret)}</p>
-                            ) : (
-                              <p className="t-num t-title select-none truncate text-xl blur-[6px]" aria-hidden>{formatRange(f.dep, f.ret)}</p>
-                            )}
-                          </div>
+                      {/* When: three plain columns, no boxes. */}
+                      <dl className="mt-5 grid grid-cols-[1.5fr_1fr_1fr] gap-3 border-t border-border pt-4 text-sm">
+                        <div className="min-w-0">
+                          <dt className="text-xs text-muted-foreground">Dates</dt>
+                          {user ? (
+                            <dd className="t-num mt-0.5 truncate font-semibold">{formatRange(f.dep, f.ret)}</dd>
+                          ) : (
+                            <dd className="mt-0.5 flex items-center gap-1.5 font-semibold">
+                              <span className="t-num select-none truncate blur-[5px]" aria-hidden>{formatRange(f.dep, f.ret)}</span>
+                              <Lock className="shrink-0 text-primary" />
+                            </dd>
+                          )}
                         </div>
-                        {!user && <span className="shrink-0 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-primary"><Lock className="mr-1" />Members</span>}
-                      </div>
-
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {[f.airline, `cheapest in ${monthLabel(f.month)}`].filter(Boolean).join(" · ")}
-                      </p>
-                      {st && st.n >= 4 && <div className="mt-3 opacity-90"><PriceMeter price={f.price} min={st.min} avg={st.avg} max={st.max} /></div>}
+                        <div className="min-w-0"><dt className="text-xs text-muted-foreground">Stay</dt><dd className="mt-0.5"><span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-semibold text-primary">{f.nights} nights</span></dd></div>
+                        <div className="min-w-0"><dt className="text-xs text-muted-foreground">Airline</dt><dd className="mt-0.5 truncate font-semibold">{f.airline || "-"}</dd></div>
+                      </dl>
                     </div>
 
-                    {/* How much */}
-                    <div className="pass-stub flex flex-col justify-between gap-3 bg-[#fbfbfc] p-5 lg:flex-row lg:items-center lg:gap-4">
-                      <PriceTag price={f.price} avg={st?.avg} size="xl" note="round trip" />
+                    {/* How much: the same height on every card so the tear lines line up. */}
+                    <div className="ticket-perf flex h-[5.25rem] items-center justify-between gap-3 bg-[#fbfbfc] px-5">
+                      <div className="min-w-0">
+                        <PriceTag price={f.price} avg={st?.avg} size="lg" />
+                      </div>
                       {user ? (
-                        <div className="flex w-full gap-2 lg:w-auto">
+                        <div className="flex shrink-0 gap-2">
                           <a
                             href={fareLink(origin.code, f.code, f.dep, f.ret)}
                             target="_blank"
                             rel="noopener noreferrer nofollow"
-                            className="font-label flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+                            className="font-label flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
                           >
                             View fare<ArrowUpRight className="ml-1.5" />
                           </a>
                           <AlertBell on={hasAlert(f.d)} onClick={() => openAlert(f)} />
                         </div>
                       ) : (
-                        <div className="flex w-full gap-2 lg:w-auto">
-                          <Link href="/signup?next=/flight-finder" className="font-label flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground transition hover:opacity-90">
+                        <div className="flex shrink-0 gap-2">
+                          <Link href="/signup?next=/flight-finder" className="font-label flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
                             Unlock dates<ArrowRight className="ml-1.5" />
                           </Link>
                           <AlertBell on={false} locked onClick={() => openAlert(f)} />
                         </div>
                       )}
-                      <div className="hidden md:block lg:hidden" aria-hidden>
-                        <div className="barcode h-8 rounded-sm" />
-                        <p className="t-num mt-1 text-center text-[10px] tracking-[0.3em] text-muted-foreground">FK · {f.code}</p>
-                      </div>
                     </div>
                   </div>
                 </li>
@@ -334,7 +310,7 @@ function AlertBell({ on, locked = false, onClick }: { on: boolean; locked?: bool
       onClick={onClick}
       aria-label={on ? "Edit your price alert" : locked ? "Price alerts, members only" : "Set a price alert"}
       title={on ? "Alert on" : "Set a price alert"}
-      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
+      className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
     >
       {on ? <BellOn className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
       {locked && <Lock className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white p-0.5 text-primary shadow" />}
