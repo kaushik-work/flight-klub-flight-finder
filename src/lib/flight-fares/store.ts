@@ -29,6 +29,7 @@ type Doc = {
   departureDate?: string; returnDate?: string; departureMonth?: string; nights?: number; price?: number;
   outbound?: { airlineName?: string; stops?: number | null; durationMinutes?: number | null };
   retrievedAt?: string;
+  baggage?: { airline?: string; url?: string }[];
 };
 
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -103,6 +104,16 @@ async function loadNights(): Promise<number[]> {
   return out.map((g) => g._id as number).filter((n) => Number.isInteger(n) && n > 0);
 }
 
+async function loadBaggage(): Promise<Record<string, string>> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 21600, expire: 86400 });
+  cacheTag("flight-fares");
+  const docs = (await (await getFaresDb()).collection(COLLECTION).find({ "baggage.0": { $exists: true } }, { projection: { baggage: 1 } }).limit(4000).toArray()) as unknown as Doc[];
+  const out: Record<string, string> = {};
+  for (const d of docs) for (const b of d.baggage ?? []) if (b.airline && b.url?.startsWith("https://") && !out[b.airline]) out[b.airline] = b.url;
+  return out;
+}
+
 // Public wrappers: a database blip must not 500 a page, so failures become "no fares right now".
 export async function getOriginRows(origin: string): Promise<Row[]> {
   try { return await loadOrigin(origin); } catch { return []; }
@@ -127,4 +138,9 @@ export async function getDestinations(): Promise<{ slug: string; city: string; c
   const seen = new Map<string, { slug: string; city: string; country: string; intl: boolean }>();
   for (const r of routes) if (!seen.has(r.d)) seen.set(r.d, { slug: r.d, city: r.city, country: r.country, intl: r.intl });
   return [...seen.values()].sort((a, b) => a.city.localeCompare(b.city));
+}
+
+/** Airline name to its own baggage-allowance page, as listed by Google Flights. Empty until the scraper has collected them. */
+export async function getBaggageLinks(): Promise<Record<string, string>> {
+  try { return await loadBaggage(); } catch { return {}; }
 }

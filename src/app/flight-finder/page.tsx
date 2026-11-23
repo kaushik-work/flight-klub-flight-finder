@@ -4,7 +4,7 @@ import FlightFinder from "@/components/FlightFinder";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { DEFAULT_ORIGIN, DESTINATIONS, type Row, findOrigin, resolveDest } from "@/lib/fares";
-import { getOriginRows } from "@/lib/flight-fares/store";
+import { getBaggageLinks, getOriginRows } from "@/lib/flight-fares/store";
 import { SITE_URL, jsonLd } from "@/lib/site";
 
 type SP = Promise<{ from?: string; to?: string; nights?: string; month?: string }>;
@@ -29,7 +29,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
 async function FinderContent({ searchParams }: { searchParams: SP }) {
   const { from, to, nights, month } = await searchParams;
   const origin = findOrigin(from) ?? DEFAULT_ORIGIN;
-  const rows = await getOriginRows(origin.slug);
+  const [rows, baggage] = await Promise.all([getOriginRows(origin.slug), getBaggageLinks()]);
   const dest = resolveDest(to, rows);
   const n = [3, 5, 7].includes(Number(nights)) ? Number(nights) : null;
   const m = month && rows.some((r) => r.month === month) ? month : null;
@@ -67,7 +67,7 @@ async function FinderContent({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
-      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} initialDest={dest} initialNights={n} initialMonth={m} fromExplicit={!!findOrigin(from)} />
+      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} baggage={baggage} initialDest={dest} initialNights={n} initialMonth={m} fromExplicit={!!findOrigin(from)} />
     </>
   );
 }

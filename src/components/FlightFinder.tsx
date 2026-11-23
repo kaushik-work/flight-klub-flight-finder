@@ -34,6 +34,7 @@ function cheapest(rows: Row[]) {
 export default function FlightFinder({
   origin,
   rows,
+  baggage = {},
   initialDest = "",
   initialNights = null,
   initialMonth = null,
@@ -41,6 +42,7 @@ export default function FlightFinder({
 }: {
   origin: Origin;
   rows: Row[];
+  baggage?: Record<string, string>;
   initialDest?: string;
   initialNights?: number | null;
   initialMonth?: string | null;
@@ -116,6 +118,17 @@ export default function FlightFinder({
     }
     return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { avg: v.sum / v.n, min: v.min, max: v.max, n: v.n }]));
   }, [pool]);
+  // The three cheapest different departure dates for a destination and trip length (a fare is only compared
+  // with the same stay), so people see more than the single best day.
+  const topDates = (f: Row) => {
+    const seen = new Set<string>();
+    const out: Row[] = [];
+    for (const r of pool) {
+      if (r.d !== f.d || r.nights !== f.nights || (month && r.month !== month) || (direct && r.stops !== 0) || seen.has(r.dep)) continue;
+      seen.add(r.dep); out.push(r);
+    }
+    return out.sort((a, b) => a.price - b.price).slice(0, 3);
+  };
   const statFor = (f: Row) => stats[`${f.d}:${f.nights}`];
   const cheapestId = useMemo(() => results.reduce<string | null>((m, f) => (m === null || f.price < results.find((x) => x.d === m)!.price ? f.d : m), null), [results]);
   const fastestId = useMemo(() => {
@@ -263,6 +276,48 @@ export default function FlightFinder({
                       </dl>
 
                       {st && st.n >= 4 && <PriceRange price={f.price} min={st.min} avg={st.avg} max={st.max} label={`Fare range for ${f.nights} nights`} />}
+
+                      {(() => {
+                        const top = topDates(f);
+                        if (top.length < 2) return null;
+                        const avg = st?.avg;
+                        return (
+                          <div className="mt-4 border-t border-border pt-3">
+                            <p className="text-xs text-muted-foreground">Best {top.length} dates for {f.nights} nights</p>
+                            <ol className="mt-1.5 space-y-1 text-sm">
+                              {top.map((r, k) => {
+                                const off = avg && r.price < avg ? Math.round((1 - r.price / avg) * 100) : 0;
+                                return (
+                                  <li key={r.dep} className="flex items-center justify-between gap-3">
+                                    <span className="flex min-w-0 items-center gap-2">
+                                      <span className="w-4 text-xs text-muted-foreground">{k + 1}</span>
+                                      {user ? (
+                                        <span className="t-num truncate font-semibold">{formatRange(r.dep, r.ret)}</span>
+                                      ) : (
+                                        <span className="t-num select-none truncate font-semibold blur-[5px]" aria-hidden>{formatRange(r.dep, r.ret)}</span>
+                                      )}
+                                      {r.airline && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{r.airline}</span>}
+                                    </span>
+                                    <span className="flex shrink-0 items-baseline gap-2">
+                                      {off >= 3 && <span className="text-xs font-semibold text-price">{off}% below avg</span>}
+                                      <span className="t-num font-semibold">{inr(r.price)}</span>
+                                    </span>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          </div>
+                        );
+                      })()}
+
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Baggage:{" "}
+                        {baggage[f.airline] ? (
+                          <a href={baggage[f.airline]} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-primary hover:underline">{f.airline} baggage rules<ArrowUpRight className="ml-1" /></a>
+                        ) : (
+                          <span>check with {f.airline || "the airline"} before you book</span>
+                        )}
+                      </p>
                     </div>
 
                     {/* How much: the same height on every card so the tear lines line up. */}
