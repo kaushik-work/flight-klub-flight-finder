@@ -92,9 +92,13 @@ export default function FlightFinder({
 
   const monthMin = useMemo(() => {
     const m: Record<string, number> = {};
-    for (const r of pool) if ((!nights || r.nights === nights) && (m[r.month] === undefined || r.price < m[r.month])) m[r.month] = r.price;
+    // Same filters as the cards below, so a month's "from" price is a price you can actually find in that month.
+    for (const r of pool) {
+      if ((nights && r.nights !== nights) || (dest && r.d !== dest) || (direct && r.stops !== 0)) continue;
+      if (m[r.month] === undefined || r.price < m[r.month]) m[r.month] = r.price;
+    }
     return m;
-  }, [pool, nights]);
+  }, [pool, nights, dest, direct]);
 
   const results = useMemo(() => {
     let r = pool;
