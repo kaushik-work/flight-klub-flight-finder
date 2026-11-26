@@ -431,7 +431,6 @@ function AlertBell({ on, locked = false, onClick }: { on: boolean; locked?: bool
       className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"}`}
     >
       {on ? <BellOn className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
-      {locked && <Lock className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white p-0.5 text-primary shadow" />}
     </button>
   );
 }
