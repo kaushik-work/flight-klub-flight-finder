@@ -275,9 +275,9 @@ export default function FlightFinder({
               const st = statFor(f);
               const open = datesOpen(f);
               return (
-                <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal">
-                  <div className="ticket" style={{ "--y": "calc(100% - 5.25rem)" } as CSSProperties}>
-                    <div className="p-5">
+                <li key={f.d} style={{ "--i": i, display: "flex" } as CSSProperties} className="ticket-shell reveal">
+                  <div className="ticket" style={{ "--y": "calc(100% - 5.25rem)", flex: 1, display: "flex", flexDirection: "column" } as CSSProperties}>
+                    <div className="p-5" style={{ flex: 1 }}>
                       {/* Where: one clear name, the rest muted. */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -335,7 +335,7 @@ export default function FlightFinder({
                                 ))}
                               </div>
                             </div>
-                            <ol className="mt-2 space-y-1 text-sm">
+                            <ol className="mt-2 space-y-1 text-sm" style={{ minHeight: "4.5rem" }}>
                               {top.map((r, k) => {
                                 const off = avg && r.price < avg ? Math.round((1 - r.price / avg) * 100) : 0;
                                 return (
