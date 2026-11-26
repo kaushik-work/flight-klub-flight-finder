@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import FlightFinder from "@/components/FlightFinder";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import { DEFAULT_ORIGIN, DESTINATIONS, type Row, findOrigin, resolveDest } from "@/lib/fares";
+import { DEFAULT_ORIGIN, DESTINATIONS, type Row, dealMonths, findOrigin, resolveDest } from "@/lib/fares";
 import { getBaggageLinks, getOriginRows } from "@/lib/flight-fares/store";
 import { SITE_URL, jsonLd } from "@/lib/site";
 
@@ -29,9 +29,12 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
 async function FinderContent({ searchParams }: { searchParams: SP }) {
   const { from, to, nights, month } = await searchParams;
   const origin = findOrigin(from) ?? DEFAULT_ORIGIN;
-  const [rows, baggage] = await Promise.all([getOriginRows(origin.slug), getBaggageLinks()]);
+  const [allRows, baggage] = await Promise.all([getOriginRows(origin.slug), getBaggageLinks()]);
+  // Flight deals covers this month and the next three only; later months are left out everywhere on the page.
+  const window = new Set(dealMonths());
+  const rows = allRows.filter((r) => window.has(r.month));
   const dest = resolveDest(to, rows);
-  const n = [3, 5, 7].includes(Number(nights)) ? Number(nights) : null;
+  const n = [3, 4, 5, 6, 7].includes(Number(nights)) ? Number(nights) : null;
   const m = month && rows.some((r) => r.month === month) ? month : null;
 
   const best = new Map<string, Row>();

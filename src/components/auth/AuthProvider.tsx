@@ -58,7 +58,8 @@ type Ctx = {
   ready: boolean;
   user: User | null;
   alerts: Alert[];
-  login: (u: User) => void;
+  /** Log in. An alert can be passed to be placed in the same step (the fare a visitor unlocked). */
+  login: (u: User, alert?: AlertInput) => void;
   updateUser: (patch: Partial<Pick<User, "name" | "city" | "email">>) => void;
   /** Record a paid card unlock (7 days) in the database. Resolves to an error message, or null when it worked. */
   unlockCard: (key: string) => Promise<string | null>;
@@ -106,7 +107,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   };
 
-  const login = useCallback((u: User) => { setUser(u); save(u, alerts); }, [alerts]);
+  const login = useCallback((u: User, alert?: AlertInput) => {
+    const next = alert ? [{ ...alert, id: alertId(alert.origin, alert.dest), createdAt: new Date().toISOString() }, ...alerts.filter((x) => x.id !== alertId(alert.origin, alert.dest))] : alerts;
+    setUser(u);
+    setAlerts(next);
+    save(u, next);
+  }, [alerts]);
   const updateUser = useCallback((patch: Partial<Pick<User, "name" | "city" | "email">>) => {
     if (!user) return;
     const next = { ...user, ...patch };

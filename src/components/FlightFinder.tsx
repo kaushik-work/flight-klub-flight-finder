@@ -10,10 +10,12 @@ import { type CSSProperties, useEffect, useMemo, useState, useTransition } from 
 import { useHomeOrigin } from "@/components/location/LocationProvider";
 import { alertId, cardKey, isMember, TRIAL_PRICE, TRIAL_UNLOCKS, trialLeft, unlockedUntil, useAuth } from "@/components/auth/AuthProvider";
 import UnlockDialog, { type UnlockTarget } from "@/components/auth/UnlockDialog";
+import GateModal from "@/components/auth/GateModal";
+import type { GateCard } from "@/lib/gate";
 import AlertDialog, { type AlertRoute } from "@/components/alerts/AlertDialog";
 import { useHydrated, useNow } from "@/lib/useHydrated";
 import {
-  ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, inr, monthLabel,
+  ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, inr, inrIf, monthLabel,
 } from "@/lib/fares";
 
 const seg = (on: boolean) =>
@@ -59,6 +61,9 @@ export default function FlightFinder({
   const alerts = hydrated ? auth.alerts : [];
   const [alertFor, setAlertFor] = useState<AlertRoute | null>(null);
   const [unlockFor, setUnlockFor] = useState<UnlockTarget | null>(null);
+  // A visitor who taps Unlock gets the plan popup for that fare; the fare is carried through sign-up and payment.
+  const [gateFor, setGateFor] = useState<GateCard | null>(null);
+  const [alertRow, setAlertRow] = useState<Row | null>(null);
   // Which month each card's "best dates" list is showing, keyed by destination and trip length.
   const [cardMonth, setCardMonth] = useState<Record<string, string>>({});
   const member = isMember(user);
@@ -156,8 +161,12 @@ export default function FlightFinder({
   }, [results]);
 
   const hasAlert = (dest: string) => alerts.some((a) => a.id === alertId(origin.slug, dest));
+  const gateCardOf = (f: Row): GateCard => ({ origin: origin.slug, originName: origin.name, dest: f.d, city: f.city, code: f.code, nights: f.nights, price: f.price, avg: statFor(f)?.avg });
   function openAlert(f: Row) {
-    setAlertFor({ origin: origin.slug, originName: origin.name, dest: f.d, city: f.city, code: f.code, price: f.price, avg: statFor(f)?.avg });
+    setAlertRow(f);
+    // A locked fare's price stays hidden in the alert window too.
+    const open = datesOpen(f);
+    setAlertFor({ origin: origin.slug, originName: origin.name, dest: f.d, city: f.city, code: f.code, price: open ? f.price : undefined, avg: open ? statFor(f)?.avg : undefined });
   }
 
   const lastSeen = useMemo(() => rows.reduce((m, r) => (r.seen > m ? r.seen : m), ""), [rows]);
@@ -187,7 +196,7 @@ export default function FlightFinder({
         </div>
         <div>
           <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Going to</span>
-          <DestinationPicker value={dest} onChange={setDest} options={destOptions} anywhere={intl ? "Anywhere abroad" : "Anywhere in India"} />
+          <DestinationPicker value={dest} onChange={setDest} options={destOptions} maskPrices={!member} anywhere={intl ? "Anywhere abroad" : "Anywhere in India"} />
         </div>
         <div>
           <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Trip length</span>
@@ -228,7 +237,7 @@ export default function FlightFinder({
           {months.filter((m) => monthMin[m] !== undefined).map((m) => (
             <button key={m} onClick={() => setMonth(m)} className={`shrink-0 rounded-xl border px-4 py-2 text-left transition ${month === m ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}>
               <span className="font-label block text-sm font-semibold">{monthLabel(m)}</span>
-              <span className="block text-xs opacity-80">from {inr(monthMin[m])}</span>
+              <span className="block text-xs opacity-80">from {inrIf(member, monthMin[m])}</span>
             </button>
           ))}
         </div>
@@ -303,7 +312,7 @@ export default function FlightFinder({
                         <div className="min-w-0"><dt className="text-xs text-muted-foreground">Airline</dt><dd className="mt-0.5 truncate font-semibold">{f.airline || "-"}</dd></div>
                       </dl>
 
-                      {st && st.n >= 4 && <PriceRange price={f.price} min={st.min} avg={st.avg} max={st.max} label={`Fare range for ${f.nights} nights`} />}
+                      {st && st.n >= 4 && <PriceRange masked={!open} price={f.price} min={st.min} avg={st.avg} max={st.max} label={`Fare range for ${f.nights} nights`} />}
 
                       {(() => {
                         const by = datesByMonth(f);
@@ -342,7 +351,7 @@ export default function FlightFinder({
                                     </span>
                                     <span className="flex shrink-0 items-baseline gap-2">
                                       {off >= 3 && <span className="text-xs font-semibold text-price">{off}% below avg</span>}
-                                      <span className="t-num font-semibold">{inr(r.price)}</span>
+                                      <span className="t-num font-semibold">{inrIf(open, r.price)}</span>
                                     </span>
                                   </li>
                                 );
@@ -365,7 +374,7 @@ export default function FlightFinder({
                     {/* How much: the same height on every card so the tear lines line up. */}
                     <div className="ticket-perf flex items-center justify-between gap-3 bg-[#fbfbfc] px-5" style={{ height: "5.25rem" }}>
                       <div className="min-w-0">
-                        <PriceTag price={f.price} avg={st?.avg} size="lg" />
+                        <PriceTag masked={!open} price={f.price} avg={st?.avg} size="lg" />
                       </div>
                       {open ? (
                         <div className="flex shrink-0 gap-2">
@@ -388,9 +397,9 @@ export default function FlightFinder({
                         </div>
                       ) : (
                         <div className="flex shrink-0 gap-2">
-                          <Link href="/signup?next=/flight-finder" className="font-label flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
-                            Unlock dates<ArrowRight className="ml-1.5" />
-                          </Link>
+                          <button onClick={() => setGateFor(gateCardOf(f))} className="font-label flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+                            <Lock className="mr-1.5 h-4 w-4" />Unlock price
+                          </button>
                           <AlertBell on={false} locked onClick={() => openAlert(f)} />
                         </div>
                       )}
@@ -405,7 +414,8 @@ export default function FlightFinder({
           Round-trip fares in rupees{lastSeen ? `, last checked ${formatDay(lastSeen)}` : ""}. Each fare is the lowest we found on the dates we checked for that month and trip length, and &quot;below average&quot; compares it with the same trip length on the same route. Prices change often, so confirm the final fare before you book.
         </p>
       </section>
-      {alertFor && <AlertDialog route={alertFor} onClose={() => setAlertFor(null)} onUpgrade={!member && user ? () => { setAlertFor(null); setUnlockFor({ key: "", label: "" }); } : undefined} />}
+      {alertFor && <AlertDialog route={alertFor} onClose={() => setAlertFor(null)} onUpgrade={!member && user ? () => { setAlertFor(null); setUnlockFor({ key: "", label: "" }); } : undefined} onGate={!user && alertRow ? () => { setAlertFor(null); setGateFor(gateCardOf(alertRow)); } : undefined} />}
+      {gateFor && <GateModal card={gateFor} onClose={() => setGateFor(null)} />}
       {unlockFor && <UnlockDialog target={unlockFor.key ? unlockFor : null} onClose={() => setUnlockFor(null)} />}
     </main>
   );

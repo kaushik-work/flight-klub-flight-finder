@@ -1,4 +1,4 @@
-import { inr } from "@/lib/fares";
+import { inrIf } from "@/lib/fares";
 
 /** Trending-down arrow: the "price dropped" symbol used everywhere a fare is below its average. */
 export function DropIcon({ className = "h-4 w-4" }: { className?: string }) {
@@ -17,8 +17,8 @@ export const dropPct = (price: number, avg?: number | null) => (avg && avg > pri
  * and says how much lower it is. Otherwise it is a plain price.
  */
 export default function PriceTag({
-  price, avg, size = "md", align = "left", note, badge = true,
-}: { price: number; avg?: number | null; size?: "md" | "lg" | "xl"; align?: "left" | "right"; note?: string; badge?: boolean }) {
+  price, avg, size = "md", align = "left", note, badge = true, masked = false,
+}: { masked?: boolean; price: number; avg?: number | null; size?: "md" | "lg" | "xl"; align?: "left" | "right"; note?: string; badge?: boolean }) {
   const off = dropPct(price, avg);
   const text = { md: "text-xl", lg: "text-2xl", xl: "text-4xl" }[size];
   const row = align === "right" ? "justify-end" : "";
@@ -26,11 +26,11 @@ export default function PriceTag({
     <div className={align === "right" ? "text-right" : ""}>
       <p className={`t-title t-num flex items-center gap-1.5 leading-tight ${row} ${text} ${off > 0 ? "text-price" : ""}`}>
         {off > 0 && <DropIcon className={size === "xl" ? "h-7 w-7" : "h-5 w-5"} />}
-        {inr(price)}
+        {inrIf(!masked, price)}
       </p>
       {off > 0 && avg && (
         <p className={`t-num mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground ${row}`}>
-          <s className="decoration-[#dc2626]/80 decoration-[1.5px]">{inr(avg)}</s>
+          <s className="decoration-[#dc2626]/80 decoration-[1.5px]">{inrIf(!masked, avg)}</s>
           {badge && <span className="inline-flex items-center gap-1 rounded-full bg-price-soft px-2 py-0.5 font-bold text-price">
             <DropIcon className="h-3 w-3" />{off}% lower
           </span>}

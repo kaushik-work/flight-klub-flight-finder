@@ -20,7 +20,7 @@ const round100 = (n: number) => Math.max(100, Math.round(n / 100) * 100);
  * Where a member sets the price they are waiting for on one route. Visitors see the same screen locked,
  * with the option to unlock alerts.
  */
-export default function AlertDialog({ route, onClose, onUpgrade }: { route: AlertRoute; onClose: () => void; onUpgrade?: () => void }) {
+export default function AlertDialog({ route, onClose, onUpgrade, onGate }: { route: AlertRoute; onClose: () => void; onUpgrade?: () => void; onGate?: () => void }) {
   const hydrated = useHydrated();
   const auth = useAuth();
   const account = hydrated ? auth.user : null;
@@ -127,7 +127,13 @@ export default function AlertDialog({ route, onClose, onUpgrade }: { route: Aler
             )}
           </div>
         ) : (
-          account && onUpgrade ? (
+          onGate && !account ? (
+            <div className="mt-5">
+              <button onClick={onGate} className="font-label flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
+                Unlock this fare<ArrowRight className="ml-1.5" />
+              </button>
+            </div>
+          ) : account && onUpgrade ? (
             <div className="mt-5">
               <button onClick={onUpgrade} className="font-label flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
                 Get a plan for alerts<ArrowRight className="ml-1.5" />

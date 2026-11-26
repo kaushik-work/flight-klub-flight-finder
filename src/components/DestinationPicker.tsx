@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CheckBadge } from "@/components/Icons";
-import { inr, REGION_ORDER, regionOf } from "@/lib/fares";
+import { inr, inrMasked, REGION_ORDER, regionOf } from "@/lib/fares";
 
 export type DestOption = { slug: string; city: string; country: string; from?: number; code?: string };
 
@@ -13,10 +13,12 @@ export type DestOption = { slug: string; city: string; country: string; from?: n
  */
 export default function DestinationPicker({
   value, onChange, options, anywhere = "Anywhere", grouped = true, showCountry = true,
-  searchPlaceholder = "Search city or country", disabled = false, variant = "box",
+  searchPlaceholder = "Search city or country", disabled = false, variant = "box", maskPrices = false,
 }: {
   value: string; onChange: (slug: string) => void; options: DestOption[];
   anywhere?: string | null; grouped?: boolean; showCountry?: boolean; searchPlaceholder?: string; disabled?: boolean; variant?: "box" | "bare";
+  /** Show "from ₹2xxx7" instead of the real price while fares are locked. */
+  maskPrices?: boolean;
 }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -143,7 +145,7 @@ export default function DestinationPicker({
                             <span className="truncate">{o.city}{country(o)}</span>
                           </span>
                           {o.from !== undefined
-                            ? <span className="t-num shrink-0 text-xs text-muted-foreground">from {inr(o.from)}</span>
+                            ? <span className="t-num shrink-0 text-xs text-muted-foreground">from {maskPrices ? inrMasked(o.from) : inr(o.from)}</span>
                             : o.code && <span className="t-num shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-bold tracking-wider text-muted-foreground">{o.code}</span>}
                         </button>
                       </li>

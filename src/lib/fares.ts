@@ -97,7 +97,23 @@ export type Route = {
   seen: string;
 };
 
+/** The months Flight deals shows: this month and the next three, by Indian time. Returns "YYYY-MM" strings. */
+export function dealMonths(now = new Date(), ahead = 3): string[] {
+  const [y, m] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit" }).format(now).split("-").map(Number);
+  return Array.from({ length: ahead + 1 }, (_, i) => {
+    const t = y * 12 + (m - 1) + i;
+    return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+  });
+}
+
 export const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
+/** A price with only the first and last digit visible, for fares that are not unlocked yet: 22,287 reads ₹2xxx7. */
+export const inrMasked = (n: number) => {
+  const d = String(Math.round(n));
+  return `₹${d[0]}xxx${d[d.length - 1]}`;
+};
+/** Shows the real price, or the masked one while it is still locked. */
+export const inrIf = (open: boolean, n: number) => (open ? inr(n) : inrMasked(n));
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

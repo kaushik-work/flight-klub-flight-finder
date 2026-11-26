@@ -12,6 +12,8 @@ import { authMessage, firebaseAuth, startSession } from "@/lib/firebase/client";
 import { ORIGINS } from "@/lib/fares";
 import { TRIAL_DAYS, TRIAL_PRICE, TRIAL_UNLOCKS } from "@/components/auth/AuthProvider";
 import { reportMember } from "@/lib/crm-client";
+import { autoAlertTarget, type GateCard, type GateOffer } from "@/lib/gate";
+import { cardKey } from "@/components/auth/AuthProvider";
 import { payWithRazorpay } from "@/lib/razorpay-client";
 import { addMonths, EMAIL, PLANS, PLANS_SENTENCE, planById, SIGNUPS_FULL } from "@/lib/site";
 import DestinationPicker from "@/components/DestinationPicker";
@@ -88,7 +90,7 @@ function GoogleIcon() {
   );
 }
 
-export default function AuthForm({ mode, next, sample, plan: planParam }: { mode: Mode; next: string; sample: Sample | null; plan?: string }) {
+export default function AuthForm({ mode, next, sample, plan: planParam, gate }: { mode: Mode; next: string; sample: Sample | null; plan?: string; gate?: { card: GateCard; offer: GateOffer } | null }) {
   const router = useRouter();
   const { login, user, ready } = useAuth();
   const signup = mode === "signup";
@@ -104,7 +106,9 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
   const [busy, setBusy] = useState(false);
   const [method, setMethod] = useState("upi");
   const [payErr, setPayErr] = useState("");
-  const [planId, setPlanId] = useState(planById(planParam).id);
+  // With a fare in hand (the one the visitor tapped Unlock on) the choice includes "just this fare" for ₹89.
+  const [choice, setChoice] = useState<"card" | string>(gate ? (gate.offer === "unlock" ? "card" : gate.offer) : planById(planParam).id);
+  const [planId, setPlanId] = useState(gate && gate.offer !== "unlock" ? planById(gate.offer).id : planById(planParam).id);
   const plan = planById(planId);
   const [wait, setWait] = useState(0);
   // Demo Google identity. Replace with the real Google sign-in result (name + verified email) later.
@@ -231,22 +235,44 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
   }
 
   // Razorpay checkout when the server has keys; otherwise the demo checkout, where no payment is taken.
+  // The fare they tapped Unlock on gets a price alert in the same step: 5% under today's fare.
+  const autoAlert = gate ? { origin: gate.card.origin, dest: gate.card.dest, city: gate.card.city, code: gate.card.code, target: autoAlertTarget(gate.card.price) } : undefined;
+
   async function pay() {
     setBusy(true);
     setPayErr("");
     const who = { name: name.trim() || "Member", city, email: google?.email };
+    const finish = () => { setStep("done"); setTimeout(() => router.push(next), 1100); };
+
+    if (gate && choice === "card") {
+      // Just this fare: a trial account with this one card open for 7 days.
+      const key = cardKey(gate.card.origin, gate.card.dest, gate.card.nights);
+      const out = await payWithRazorpay({ kind: "unlock", key }, who);
+      if (out.status === "paid" && out.result.kind === "unlock") {
+        login({ ...who, phone, trial: out.result.trial }, autoAlert);
+        finish();
+      } else if (out.status === "demo") {
+        await new Promise((r) => setTimeout(r, 900));
+        const rec = await fetch("/api/unlocks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+        const until = new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString();
+        login({ ...who, phone, trial: rec?.trial ?? { bought: 1, unlocks: [{ key, until }] } }, autoAlert);
+        reportMember("trial", who);
+        finish();
+      } else if (out.status === "error") setPayErr(out.message);
+      setBusy(false);
+      return;
+    }
+
     const out = await payWithRazorpay({ kind: "plan", planId: plan.id }, who);
     if (out.status === "paid" && out.result.kind === "plan") {
-      login({ ...who, phone, plan: out.result.plan.id, since: out.result.plan.since, renews: out.result.plan.renews });
-      setStep("done");
-      setTimeout(() => router.push(next), 1100);
+      login({ ...who, phone, plan: out.result.plan.id, since: out.result.plan.since, renews: out.result.plan.renews }, autoAlert);
+      finish();
     } else if (out.status === "demo") {
       await new Promise((r) => setTimeout(r, 900));
       const nowDate = new Date();
-      login({ ...who, phone, plan: plan.id, since: nowDate.toISOString(), renews: addMonths(nowDate, plan.months).toISOString() });
+      login({ ...who, phone, plan: plan.id, since: nowDate.toISOString(), renews: addMonths(nowDate, plan.months).toISOString() }, autoAlert);
       reportMember("plan", who, { planId: plan.id, method });
-      setStep("done");
-      setTimeout(() => router.push(next), 1100);
+      finish();
     } else if (out.status === "error") {
       setPayErr(out.message);
     }
@@ -308,7 +334,27 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
 
               {step === "pay" ? (
                 <div className="mt-8 space-y-6 text-left">
-                  <fieldset>
+                  {gate && (
+                    <fieldset>
+                      <legend className="mb-1.5 block text-sm font-medium">What would you like to unlock?</legend>
+                      <div className="space-y-2">
+                        <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition ${choice === "card" ? "border-primary bg-secondary ring-4 ring-primary/10" : "border-border bg-white hover:border-primary/50"}`}>
+                          <input type="radio" name="choice" checked={choice === "card"} onChange={() => setChoice("card")} className="sr-only" />
+                          <span><span className="block text-sm font-semibold">Just this fare</span><span className="block text-xs text-muted-foreground">{gate.card.originName} to {gate.card.city} · dates open for {TRIAL_DAYS} days</span></span>
+                          <span className="t-title t-num text-2xl">₹{TRIAL_PRICE}</span>
+                        </label>
+                        {PLANS.map((p) => (
+                          <label key={p.id} className={`relative flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition ${choice === p.id ? "border-primary bg-secondary ring-4 ring-primary/10" : "border-border bg-white hover:border-primary/50"}`}>
+                            <input type="radio" name="choice" checked={choice === p.id} onChange={() => { setChoice(p.id); setPlanId(p.id); }} className="sr-only" />
+                            <span><span className="block text-sm font-semibold">{p.name}{p.months === 12 && <span className="ml-2 rounded-full bg-price px-2 py-0.5 text-[10px] font-bold text-white">Best value</span>}</span><span className="block text-xs text-muted-foreground">Every date and alert on every fare</span></span>
+                            <span className="t-title t-num text-2xl">₹{p.price}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">Whichever you choose, this fare opens and we set a price alert on it for you.</p>
+                    </fieldset>
+                  )}
+                  <fieldset className={gate ? "hidden" : ""}>
                     <legend className="mb-1.5 block text-sm font-medium">Choose your plan</legend>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {PLANS.map((p) => (
@@ -333,10 +379,10 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
                       ))}
                     </div>
                   </fieldset>
-                  <button onClick={pay} disabled={busy} className={primaryBtn}>{busy ? "Processing…" : `Pay ₹${plan.price}`}</button>
+                  <button onClick={pay} disabled={busy} className={primaryBtn}>{busy ? "Processing…" : `Pay ₹${gate && choice === "card" ? TRIAL_PRICE : plan.price}`}</button>
                   {payErr && <p className="text-center text-sm text-red-600" role="alert">{payErr}</p>}
                   <p className="text-center text-xs text-muted-foreground">Secure payment by Razorpay. If it is not switched on yet, this is a demo and no payment is taken.</p>
-                  <button type="button" onClick={startTrial} disabled={busy} className="font-label w-full rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition hover:border-primary/50 disabled:opacity-60">
+                  <button type="button" onClick={startTrial} disabled={busy} hidden={!!gate} className="font-label w-full rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition hover:border-primary/50 disabled:opacity-60">
                     Not ready? Try {TRIAL_UNLOCKS} fares first at ₹{TRIAL_PRICE} each
                   </button>
                   <p className="text-center text-xs text-muted-foreground">Once per account, GST included. Each unlock shows one fare&apos;s dates for {TRIAL_DAYS} days.</p>
