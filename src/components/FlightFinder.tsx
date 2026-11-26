@@ -59,6 +59,8 @@ export default function FlightFinder({
   const alerts = hydrated ? auth.alerts : [];
   const [alertFor, setAlertFor] = useState<AlertRoute | null>(null);
   const [unlockFor, setUnlockFor] = useState<UnlockTarget | null>(null);
+  // Which month each card's "best dates" list is showing, keyed by destination and trip length.
+  const [cardMonth, setCardMonth] = useState<Record<string, string>>({});
   const member = isMember(user);
   const left = trialLeft(user);
   const now = useNow();
@@ -132,14 +134,19 @@ export default function FlightFinder({
   }, [pool]);
   // The three cheapest different departure dates for a destination and trip length (a fare is only compared
   // with the same stay), so people see more than the single best day.
-  const topDates = (f: Row) => {
-    const seen = new Set<string>();
-    const out: Row[] = [];
+  // The cheapest departure dates for a destination and trip length (a fare is only compared with the same stay), kept
+  // per month so each month gets its own top three instead of one overall list.
+  const datesByMonth = (f: Row) => {
+    const best = new Map<string, Row>(); // one row per departure date
     for (const r of pool) {
-      if (r.d !== f.d || r.nights !== f.nights || (month && r.month !== month) || (direct && r.stops !== 0) || seen.has(r.dep)) continue;
-      seen.add(r.dep); out.push(r);
+      if (r.d !== f.d || r.nights !== f.nights || (direct && r.stops !== 0)) continue;
+      const c = best.get(r.dep);
+      if (!c || r.price < c.price) best.set(r.dep, r);
     }
-    return out.sort((a, b) => a.price - b.price).slice(0, 3);
+    const by: Record<string, Row[]> = {};
+    for (const r of best.values()) (by[r.month] ??= []).push(r);
+    for (const list of Object.values(by)) list.sort((a, b) => a.price - b.price);
+    return by;
   };
   const statFor = (f: Row) => stats[`${f.d}:${f.nights}`];
   const cheapestId = useMemo(() => results.reduce<string | null>((m, f) => (m === null || f.price < results.find((x) => x.d === m)!.price ? f.d : m), null), [results]);
@@ -299,13 +306,27 @@ export default function FlightFinder({
                       {st && st.n >= 4 && <PriceRange price={f.price} min={st.min} avg={st.avg} max={st.max} label={`Fare range for ${f.nights} nights`} />}
 
                       {(() => {
-                        const top = topDates(f);
-                        if (top.length < 2) return null;
+                        const by = datesByMonth(f);
+                        const mos = Object.keys(by).sort();
+                        if (mos.length === 0) return null;
+                        const key = `${f.d}:${f.nights}`;
+                        const shown = mos.includes(cardMonth[key]) ? cardMonth[key] : month && mos.includes(month) ? month : mos.includes(f.month) ? f.month : mos[0];
+                        const top = by[shown].slice(0, 3);
                         const avg = st?.avg;
                         return (
                           <div className="mt-4 border-t border-border pt-3">
-                            <p className="text-xs text-muted-foreground">Best {top.length} dates for {f.nights} nights</p>
-                            <ol className="mt-1.5 space-y-1 text-sm">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-xs text-muted-foreground">Best dates in {monthLabel(shown)}, {f.nights} nights</p>
+                              <div className="flex flex-wrap gap-1" role="tablist" aria-label="Month">
+                                {mos.map((mo) => (
+                                  <button key={mo} role="tab" aria-selected={mo === shown} onClick={() => setCardMonth((c) => ({ ...c, [key]: mo }))}
+                                    className={`rounded-md px-2 py-0.5 text-[11px] font-semibold transition ${mo === shown ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
+                                    {monthLabel(mo).split(" ")[0]}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <ol className="mt-2 space-y-1 text-sm">
                               {top.map((r, k) => {
                                 const off = avg && r.price < avg ? Math.round((1 - r.price / avg) * 100) : 0;
                                 return (
