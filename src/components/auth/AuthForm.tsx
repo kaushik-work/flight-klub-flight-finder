@@ -12,6 +12,7 @@ import { authMessage, firebaseAuth, startSession } from "@/lib/firebase/client";
 import { ORIGINS } from "@/lib/fares";
 import { TRIAL_DAYS, TRIAL_PRICE, TRIAL_UNLOCKS } from "@/components/auth/AuthProvider";
 import { reportMember } from "@/lib/crm-client";
+import { payWithRazorpay } from "@/lib/razorpay-client";
 import { addMonths, EMAIL, PLANS, PLANS_SENTENCE, planById, SIGNUPS_FULL } from "@/lib/site";
 import DestinationPicker from "@/components/DestinationPicker";
 import PriceTag from "@/components/PriceTag";
@@ -102,6 +103,7 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
   const [err, setErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [method, setMethod] = useState("upi");
+  const [payErr, setPayErr] = useState("");
   const [planId, setPlanId] = useState(planById(planParam).id);
   const plan = planById(planId);
   const [wait, setWait] = useState(0);
@@ -228,17 +230,27 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
     }
   }
 
-  // Demo checkout: no payment is taken. Swap for Razorpay (create order, open checkout, verify) later.
-  function pay() {
+  // Razorpay checkout when the server has keys; otherwise the demo checkout, where no payment is taken.
+  async function pay() {
     setBusy(true);
-    setTimeout(() => {
-      setBusy(false);
-      const nowDate = new Date();
-      login({ name: name.trim() || "Member", phone, city, email: google?.email, plan: plan.id, since: nowDate.toISOString(), renews: addMonths(nowDate, plan.months).toISOString() });
-      reportMember("plan", { name: name.trim() || "Member", city, email: google?.email }, { planId: plan.id, method });
+    setPayErr("");
+    const who = { name: name.trim() || "Member", city, email: google?.email };
+    const out = await payWithRazorpay({ kind: "plan", planId: plan.id }, who);
+    if (out.status === "paid" && out.result.kind === "plan") {
+      login({ ...who, phone, plan: out.result.plan.id, since: out.result.plan.since, renews: out.result.plan.renews });
       setStep("done");
       setTimeout(() => router.push(next), 1100);
-    }, 900);
+    } else if (out.status === "demo") {
+      await new Promise((r) => setTimeout(r, 900));
+      const nowDate = new Date();
+      login({ ...who, phone, plan: plan.id, since: nowDate.toISOString(), renews: addMonths(nowDate, plan.months).toISOString() });
+      reportMember("plan", who, { planId: plan.id, method });
+      setStep("done");
+      setTimeout(() => router.push(next), 1100);
+    } else if (out.status === "error") {
+      setPayErr(out.message);
+    }
+    setBusy(false);
   }
 
   // The one-time trial: skip the plan, then unlock up to three cards at ₹89 each from the finder.
@@ -322,7 +334,8 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
                     </div>
                   </fieldset>
                   <button onClick={pay} disabled={busy} className={primaryBtn}>{busy ? "Processing…" : `Pay ₹${plan.price}`}</button>
-                  <p className="text-center text-xs text-muted-foreground">Demo checkout: no payment is taken yet.</p>
+                  {payErr && <p className="text-center text-sm text-red-600" role="alert">{payErr}</p>}
+                  <p className="text-center text-xs text-muted-foreground">Secure payment by Razorpay. If it is not switched on yet, this is a demo and no payment is taken.</p>
                   <button type="button" onClick={startTrial} disabled={busy} className="font-label w-full rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition hover:border-primary/50 disabled:opacity-60">
                     Not ready? Try {TRIAL_UNLOCKS} fares first at ₹{TRIAL_PRICE} each
                   </button>

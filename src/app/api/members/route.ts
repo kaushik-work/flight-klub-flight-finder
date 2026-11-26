@@ -1,14 +1,28 @@
 import { cookies } from "next/headers";
 import { type NextRequest } from "next/server";
 import { adminAuth, SESSION_COOKIE } from "@/lib/firebase/admin";
-import { recordMember, recordPayment } from "@/lib/crm";
+import { getCrmDb, recordMember, recordPayment } from "@/lib/crm";
 import { PLANS } from "@/lib/site";
+import { razorpayConfigured } from "@/lib/razorpay";
 
 // Tells the CRM about a signup or a plan purchase, against the verified mobile number from the server session.
 //   POST { event: "signup" | "trial" | "plan", name, city, email?, planId?, method? }
 // 503 means server login is not configured (local demo): the site carries on and nothing is recorded.
 
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
+export async function GET() {
+  const auth = adminAuth();
+  if (!auth) return json({ error: "Server auth is not configured" }, 503);
+  const value = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!value) return json({ error: "No session" }, 401);
+  try {
+    const phone = (await auth.verifySessionCookie(value, true)).phone_number;
+    if (!phone) return json({ error: "No verified number" }, 403);
+    const m = await (await getCrmDb()).collection<{ _id: string; plan?: string; since?: string; renews?: string }>("members").findOne({ _id: phone });
+    return json({ plan: m?.plan && m.renews ? { id: m.plan, since: m.since ?? null, renews: m.renews } : null });
+  } catch { return json({ error: "Unavailable" }, 500); }
+}
+
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 export async function POST(request: NextRequest) {
@@ -28,6 +42,8 @@ export async function POST(request: NextRequest) {
 
   try {
     if (event === "plan") {
+      // With real payments on, a plan exists only after a verified payment (see /api/payments), never from this demo path.
+      if (razorpayConfigured()) return json({ error: "Plans are bought through checkout." }, 403);
       const planId = str(b.planId, 10);
       if (!PLANS.some((p) => p.id === planId)) return json({ error: "Unknown plan" }, 400);
       await recordMember(phone, { name, city, email }, { plan: planId });

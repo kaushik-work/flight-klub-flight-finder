@@ -40,7 +40,7 @@ export default async function AdminHome() {
       </div>
       {all.demoAmount > 0 && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {inr(all.demoAmount)} of the collected amount comes from the demo checkout, where no real money was taken. It will read as live once real payments are switched on.
+          {inr(all.demoAmount)} of the collected amount comes from demo or Razorpay test payments, where no real money was taken. Only payments made with a live Razorpay key count as money collected for real.
         </p>
       )}
 

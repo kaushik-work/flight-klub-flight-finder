@@ -16,11 +16,11 @@ export async function getCrmDb(): Promise<Db> {
 }
 
 export const UNLOCK_PRICE = 89; // rupees, GST included
-export const PAYMENT_MODE = process.env.PAYMENTS_LIVE === "true" ? "live" : "demo";
+export type PaymentMode = "demo" | "test" | "live";
 
 export type MemberInput = { name: string; email?: string; city: string };
 
-export async function recordMember(phone: string, m: MemberInput, extra: { plan?: string; trial?: boolean } = {}) {
+export async function recordMember(phone: string, m: MemberInput, extra: { plan?: string; since?: string; renews?: string; trial?: boolean } = {}) {
   const db = await getCrmDb();
   const now = new Date().toISOString();
   await db.collection<{ _id: string }>("members").updateOne(
@@ -30,9 +30,18 @@ export async function recordMember(phone: string, m: MemberInput, extra: { plan?
   );
 }
 
-export async function recordPayment(phone: string, p: { kind: "plan"; planId: string; method?: string } | { kind: "unlock"; cardKey: string; method?: string }) {
-  const amount = p.kind === "plan" ? PLANS.find((x) => x.id === p.planId)?.price : UNLOCK_PRICE;
+export const priceOf = (p: { kind: "plan"; planId: string } | { kind: "unlock" }) =>
+  p.kind === "plan" ? PLANS.find((x) => x.id === p.planId)?.price : UNLOCK_PRICE;
+
+/** One row per payment. `mode` is "demo" (no money), "test" (Razorpay test key) or "live"; only "live" is real money. */
+export async function recordPayment(
+  phone: string,
+  p: { kind: "plan"; planId: string; method?: string } | { kind: "unlock"; cardKey: string; method?: string },
+  opts: { mode?: PaymentMode; orderId?: string; paymentId?: string } = {},
+) {
+  const amount = priceOf(p);
   if (!amount) return false;
-  await (await getCrmDb()).collection("payments").insertOne({ phone, ...p, amount, mode: PAYMENT_MODE, at: new Date().toISOString() });
+  const { mode = "demo", orderId, paymentId } = opts;
+  await (await getCrmDb()).collection("payments").insertOne({ phone, ...p, amount, mode, ...(orderId ? { orderId } : {}), ...(paymentId ? { paymentId } : {}), at: new Date().toISOString() });
   return true;
 }

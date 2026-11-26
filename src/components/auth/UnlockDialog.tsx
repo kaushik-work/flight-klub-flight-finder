@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckBadge, Lock } from "@/components/Icons";
 import { TRIAL_DAYS, TRIAL_PRICE, TRIAL_UNLOCKS, trialLeft, useAuth } from "@/components/auth/AuthProvider";
 import { reportMember } from "@/lib/crm-client";
+import { payWithRazorpay } from "@/lib/razorpay-client";
 import { PLANS, planById } from "@/lib/site";
 
 export type UnlockTarget = { key: string; label: string };
@@ -32,23 +33,32 @@ export default function UnlockDialog({ target, onClose }: { target: UnlockTarget
     return () => { document.removeEventListener("keydown", esc); document.body.style.overflow = prev; };
   }, [onClose]);
 
-  function pay() {
-    if (busy) return;
+  // Real checkout (Razorpay) when the server has keys; otherwise the demo checkout below, where no payment is taken.
+  async function pay() {
+    if (busy || !auth.user) return;
     setBusy(true);
     setError("");
-    // Demo only. The unlock is recorded (in the database) after the pretend payment succeeds, never before.
-    setTimeout(async () => {
+    const who = { name: auth.user.name, city: auth.user.city, email: auth.user.email };
+    const want = cardMode && target ? ({ kind: "unlock", key: target.key } as const) : ({ kind: "plan", planId } as const);
+    const out = await payWithRazorpay(want, who);
+    if (out.status === "paid") {
+      if (out.result.kind === "plan") { auth.applyPlan(out.result.plan); setDone(`${planById(out.result.plan.id).name} membership is on. Every date is unlocked.`); }
+      else { auth.applyTrial(out.result.trial); setDone(`Dates unlocked for ${TRIAL_DAYS} days.`); }
+    } else if (out.status === "error") {
+      setError(out.message);
+    } else if (out.status === "demo") {
+      await new Promise((r) => setTimeout(r, 900));
       if (cardMode && target) {
         const err = await auth.unlockCard(target.key);
         if (err) setError(err); else setDone(`Dates unlocked for ${TRIAL_DAYS} days.`);
       } else {
         const p = planById(planId);
         auth.buyPlan(p.months, p.id);
-        if (auth.user) reportMember("plan", { name: auth.user.name, city: auth.user.city, email: auth.user.email }, { planId: p.id, method });
+        reportMember("plan", who, { planId: p.id, method });
         setDone(`${p.name} membership is on. Every date is unlocked.`);
       }
-      setBusy(false);
-    }, 900);
+    }
+    setBusy(false);
   }
 
   const plan = planById(planId);
@@ -109,7 +119,7 @@ export default function UnlockDialog({ target, onClose }: { target: UnlockTarget
               {busy ? "Processing…" : `Pay ₹${cardMode ? TRIAL_PRICE : plan.price}`}
             </button>
             {error && <p className="mt-3 text-center text-sm text-red-600" role="alert">{error}</p>}
-            <p className="mt-3 text-center text-xs text-muted-foreground">Demo checkout: no payment is taken yet.</p>
+            <p className="mt-3 text-center text-xs text-muted-foreground">Secure payment by Razorpay. If it is not switched on yet, this is a demo and no payment is taken.</p>
           </>
         )}
       </div>

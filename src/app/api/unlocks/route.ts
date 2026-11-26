@@ -4,6 +4,7 @@ import { adminAuth, SESSION_COOKIE } from "@/lib/firebase/admin";
 import { getFaresDb } from "@/lib/flight-fares/store";
 import { getTrial, unlockCard, validKey } from "@/lib/unlocks";
 import { recordPayment } from "@/lib/crm";
+import { razorpayConfigured } from "@/lib/razorpay";
 
 // The date-unlock trial, kept in the database against the verified mobile number from the server session.
 //   GET            what this account has bought and which cards are open
@@ -30,6 +31,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // With real payments on, an unlock exists only after a verified payment (see /api/payments), never from this demo path.
+  if (razorpayConfigured()) return json({ error: "Unlocks are bought through checkout." }, 403);
   const { phone, status } = await phoneFromSession();
   if (!phone) return json({ error: "No session" }, status);
   let key: unknown;

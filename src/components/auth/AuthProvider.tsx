@@ -64,6 +64,10 @@ type Ctx = {
   unlockCard: (key: string) => Promise<string | null>;
   /** Record a paid plan on this account. */
   buyPlan: (months: number, planId: string) => void;
+  /** Take the trial state the server returned after a verified payment. */
+  applyTrial: (trial: Trial) => void;
+  /** Take the plan the server returned after a verified payment (or found on the account at load). */
+  applyPlan: (plan: { id: string; since?: string | null; renews: string }) => void;
   logout: () => void;
   setAlert: (a: AlertInput) => void;
   removeAlert: (id: string) => void;
@@ -118,6 +122,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [alerts]);
 
+  const applyPlan = useCallback((plan: { id: string; since?: string | null; renews: string }) => {
+    setUser((u) => {
+      if (!u) return u;
+      const next: User = { ...u, plan: plan.id, since: plan.since ?? u.since, renews: plan.renews };
+      save(next, alerts);
+      return next;
+    });
+  }, [alerts]);
   // The database is the record: on load (and after login) take the trial from the server, so the unlocks used and the
   // cards opened are the same on every device and survive a cleared browser.
   const phone = user?.phone;
@@ -125,8 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!phone) return;
     let live = true;
     fetch("/api/unlocks").then((r) => (r.ok ? r.json() : null)).then((d) => { if (live && d?.trial) withTrial(d.trial as Trial); }).catch(() => {});
+    fetch("/api/members").then((r) => (r.ok ? r.json() : null)).then((d) => { if (live && d?.plan) applyPlan(d.plan); }).catch(() => {});
     return () => { live = false; };
-  }, [phone, withTrial]);
+  }, [phone, withTrial, applyPlan]);
 
   const unlockCard = useCallback(async (key: string): Promise<string | null> => {
     if (!user?.trial) return "Trial is not available on this account.";
@@ -169,8 +182,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, alerts]);
 
   const value = useMemo(
-    () => ({ ready, user, alerts, login, updateUser, unlockCard, buyPlan, logout, setAlert, removeAlert }),
-    [ready, user, alerts, login, updateUser, unlockCard, buyPlan, logout, setAlert, removeAlert],
+    () => ({ ready, user, alerts, login, updateUser, unlockCard, buyPlan, applyTrial: withTrial, applyPlan, logout, setAlert, removeAlert }),
+    [ready, user, alerts, login, updateUser, unlockCard, buyPlan, withTrial, applyPlan, logout, setAlert, removeAlert],
   );
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

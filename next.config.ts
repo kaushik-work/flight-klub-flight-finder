@@ -6,12 +6,12 @@ const isProd = process.env.NODE_ENV === "production";
 // Dev also needs 'unsafe-eval' for hot reload, so the CSP is only enforced in production builds.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://apis.google.com",
+  "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://apis.google.com https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://*.razorpay.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://www.google.com",
-  "frame-src https://www.google.com https://*.firebaseapp.com https://accounts.google.com",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://www.google.com https://api.razorpay.com https://lumberjack.razorpay.com https://checkout.razorpay.com",
+  "frame-src https://www.google.com https://*.firebaseapp.com https://accounts.google.com https://api.razorpay.com https://checkout.razorpay.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
