@@ -84,7 +84,7 @@ export default function FlightFinder({
   const [intl, setIntl] = useState(rows.find((r) => r.d === initialDest)?.intl ?? true);
   const [dest, setDest] = useState(initialDest);
   const [nights, setNights] = useState<number | null>(initialNights);
-  const [month, setMonth] = useState<string | null>(initialMonth);
+  const [monthPick, setMonth] = useState<string | null>(initialMonth);
   const [sort, setSort] = useState<"cheapest" | "shortest">("cheapest");
   const [direct, setDirect] = useState(false);
 
@@ -114,6 +114,12 @@ export default function FlightFinder({
     }
     return m;
   }, [pool, nights, dest, direct]);
+  // There is no "any month": one month is always selected, the picked one or else the first month that has fares for these filters.
+  const month = useMemo(() => {
+    const have = months.filter((m) => monthMin[m] !== undefined);
+    return monthPick && have.includes(monthPick) ? monthPick : have[0] ?? null;
+  }, [months, monthMin, monthPick]);
+
 
   const results = useMemo(() => {
     let r = pool;
@@ -230,10 +236,6 @@ export default function FlightFinder({
       <section id="months" className="mt-6">
         <h2 className="font-label mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pick a month</h2>
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
-          <button onClick={() => setMonth(null)} className={`shrink-0 rounded-xl border px-4 py-2 text-left transition ${month === null ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}>
-            <span className="font-label block text-sm font-semibold">Any month</span>
-            <span className="block text-xs opacity-80">Best fares</span>
-          </button>
           {months.filter((m) => monthMin[m] !== undefined).map((m) => (
             <button key={m} onClick={() => setMonth(m)} className={`shrink-0 rounded-xl border px-4 py-2 text-left transition ${month === m ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}>
               <span className="font-label block text-sm font-semibold">{monthLabel(m)}</span>
