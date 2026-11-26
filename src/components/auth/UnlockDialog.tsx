@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckBadge, Lock } from "@/components/Icons";
 import { TRIAL_DAYS, TRIAL_PRICE, TRIAL_UNLOCKS, trialLeft, useAuth } from "@/components/auth/AuthProvider";
+import { reportMember } from "@/lib/crm-client";
 import { PLANS, planById } from "@/lib/site";
 
 export type UnlockTarget = { key: string; label: string };
@@ -43,6 +44,7 @@ export default function UnlockDialog({ target, onClose }: { target: UnlockTarget
       } else {
         const p = planById(planId);
         auth.buyPlan(p.months, p.id);
+        if (auth.user) reportMember("plan", { name: auth.user.name, city: auth.user.city, email: auth.user.email }, { planId: p.id, method });
         setDone(`${p.name} membership is on. Every date is unlocked.`);
       }
       setBusy(false);

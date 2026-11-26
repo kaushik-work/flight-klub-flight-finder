@@ -3,6 +3,7 @@ import { type NextRequest } from "next/server";
 import { adminAuth, SESSION_COOKIE } from "@/lib/firebase/admin";
 import { getFaresDb } from "@/lib/flight-fares/store";
 import { getTrial, unlockCard, validKey } from "@/lib/unlocks";
+import { recordPayment } from "@/lib/crm";
 
 // The date-unlock trial, kept in the database against the verified mobile number from the server session.
 //   GET            what this account has bought and which cards are open
@@ -38,6 +39,8 @@ export async function POST(request: NextRequest) {
     // Demo checkout: the payment is not verified yet. When Razorpay is live, verify the payment signature here
     // and refuse the unlock if it does not check out.
     const r = await unlockCard(await getFaresDb(), phone, key, "demo");
+    // A new unlock is a payment the CRM reports on. Recording it never blocks or undoes the unlock itself.
+    if (r.ok && !r.already) await recordPayment(phone, { kind: "unlock", cardKey: key }).catch(() => {});
     return r.ok ? json({ ok: true, trial: r.trial, already: r.already }) : json({ error: r.reason, trial: r.trial }, r.reason === "used-up" ? 409 : 400);
   } catch { return json({ error: "Unavailable" }, 500); }
 }

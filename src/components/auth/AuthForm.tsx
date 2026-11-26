@@ -11,6 +11,7 @@ import {
 import { authMessage, firebaseAuth, startSession } from "@/lib/firebase/client";
 import { ORIGINS } from "@/lib/fares";
 import { TRIAL_DAYS, TRIAL_PRICE, TRIAL_UNLOCKS } from "@/components/auth/AuthProvider";
+import { reportMember } from "@/lib/crm-client";
 import { addMonths, EMAIL, PLANS, PLANS_SENTENCE, planById, SIGNUPS_FULL } from "@/lib/site";
 import DestinationPicker from "@/components/DestinationPicker";
 import PriceTag from "@/components/PriceTag";
@@ -234,6 +235,7 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
       setBusy(false);
       const nowDate = new Date();
       login({ name: name.trim() || "Member", phone, city, email: google?.email, plan: plan.id, since: nowDate.toISOString(), renews: addMonths(nowDate, plan.months).toISOString() });
+      reportMember("plan", { name: name.trim() || "Member", city, email: google?.email }, { planId: plan.id, method });
       setStep("done");
       setTimeout(() => router.push(next), 1100);
     }, 900);
@@ -242,6 +244,7 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
   // The one-time trial: skip the plan, then unlock up to three cards at ₹89 each from the finder.
   function startTrial() {
     login({ name: name.trim() || "Member", phone, city, email: google?.email, trial: { bought: 0, unlocks: [] } });
+    reportMember("trial", { name: name.trim() || "Member", city, email: google?.email });
     setStep("done");
     setTimeout(() => router.push(next), 1100);
   }
