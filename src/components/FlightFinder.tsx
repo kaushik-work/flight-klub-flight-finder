@@ -64,8 +64,6 @@ export default function FlightFinder({
   // A visitor who taps Unlock gets the plan popup for that fare; the fare is carried through sign-up and payment.
   const [gateFor, setGateFor] = useState<GateCard | null>(null);
   const [alertRow, setAlertRow] = useState<Row | null>(null);
-  // Which month each card's "best dates" list is showing, keyed by destination and trip length.
-  const [cardMonth, setCardMonth] = useState<Record<string, string>>({});
   const member = isMember(user);
   const left = trialLeft(user);
   const now = useNow();
@@ -320,22 +318,14 @@ export default function FlightFinder({
                         const by = datesByMonth(f);
                         const mos = Object.keys(by).sort();
                         if (mos.length === 0) return null;
-                        const key = `${f.d}:${f.nights}`;
-                        const shown = mos.includes(cardMonth[key]) ? cardMonth[key] : month && mos.includes(month) ? month : mos.includes(f.month) ? f.month : mos[0];
+                        // The page-level month filter decides the month; the card has no month switch of its own.
+                        const shown = month && mos.includes(month) ? month : mos.includes(f.month) ? f.month : mos[0];
                         const top = by[shown].slice(0, 3);
                         const avg = st?.avg;
                         return (
                           <div className="mt-4 border-t border-border pt-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
                               <p className="text-xs text-muted-foreground">Best dates in {monthLabel(shown)}, {f.nights} nights</p>
-                              <div className="flex flex-wrap gap-1" role="tablist" aria-label="Month">
-                                {mos.map((mo) => (
-                                  <button key={mo} role="tab" aria-selected={mo === shown} onClick={() => setCardMonth((c) => ({ ...c, [key]: mo }))}
-                                    className={`rounded-md px-2 py-0.5 text-[11px] font-semibold transition ${mo === shown ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
-                                    {monthLabel(mo).split(" ")[0]}
-                                  </button>
-                                ))}
-                              </div>
                             </div>
                             <ol className="mt-2 space-y-1 text-sm" style={{ minHeight: "4.5rem" }}>
                               {top.map((r, k) => {
