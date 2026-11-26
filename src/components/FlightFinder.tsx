@@ -119,10 +119,12 @@ export default function FlightFinder({
   }, [months, monthMin, monthPick]);
 
 
-  // Locked prices are not shown on the month tabs. Each month is compared with the first one instead: "5% higher than Nov".
+  // Locked prices are not shown on the month tabs. Each month is compared with the current month instead: "5% higher than Nov".
+  // (If nothing is priced in the current month for these filters, the first month that has fares stands in.)
   const vsFirst = (m: string) => {
     const have = months.filter((x) => monthMin[x] !== undefined);
-    const base = have[0];
+    const current = dealMonths()[0];
+    const base = monthMin[current] !== undefined ? current : have[0];
     if (!base || m === base) return "This month";
     const pct = Math.round((monthMin[m] / monthMin[base] - 1) * 100);
     const name = monthLabel(base).split(" ")[0];
