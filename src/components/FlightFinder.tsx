@@ -119,6 +119,16 @@ export default function FlightFinder({
   }, [months, monthMin, monthPick]);
 
 
+  // Locked prices are not shown on the month tabs. Each month is compared with the first one instead: "5% higher than Nov".
+  const vsFirst = (m: string) => {
+    const have = months.filter((x) => monthMin[x] !== undefined);
+    const base = have[0];
+    if (!base || m === base) return "This month";
+    const pct = Math.round((monthMin[m] / monthMin[base] - 1) * 100);
+    const name = monthLabel(base).split(" ")[0];
+    return pct === 0 ? `Same as ${name}` : `${Math.abs(pct)}% ${pct > 0 ? "higher" : "lower"} than ${name}`;
+  };
+
   const results = useMemo(() => {
     let r = pool;
     if (month) r = r.filter((x) => x.month === month);
@@ -237,7 +247,7 @@ export default function FlightFinder({
           {months.filter((m) => monthMin[m] !== undefined).map((m) => (
             <button key={m} onClick={() => setMonth(m)} className={`shrink-0 rounded-xl border px-4 py-2 text-left transition ${month === m ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}>
               <span className="font-label block text-sm font-semibold">{monthLabel(m)}</span>
-              <span className="block text-xs opacity-80">from {inrIf(member, monthMin[m])}</span>
+              <span className="block text-xs opacity-80">{member ? `from ${inr(monthMin[m])}` : vsFirst(m)}</span>
             </button>
           ))}
         </div>
