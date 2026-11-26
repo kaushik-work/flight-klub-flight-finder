@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { importFirebaseUsers } from "@/lib/admin/import";
 import { adminUsername, blocked, checkLogin, endSession, recoveryKeyMatches, requireAdmin, setPassword, startSession, strike } from "@/lib/admin/auth";
 
 export type FormState = { error?: string; done?: boolean };
@@ -52,4 +53,11 @@ export async function changePassword(_: FormState, form: FormData): Promise<Form
   if (!(await checkLogin(user, current))) return { error: "Your current password is not right." };
   await setPassword(user, next);
   return { done: true };
+}
+
+/** Pull the latest signups from Firebase's list of verified numbers into the CRM, then come back to the Signups screen. */
+export async function syncSignups() {
+  await requireAdmin();
+  const r = await importFirebaseUsers();
+  redirect(r.ok ? `/admin/signups?synced=${r.added}&seen=${r.seen}` : `/admin/signups?syncerror=${encodeURIComponent(r.error)}`);
 }
