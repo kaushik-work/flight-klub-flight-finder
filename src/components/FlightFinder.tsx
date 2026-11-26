@@ -15,7 +15,7 @@ import type { GateCard } from "@/lib/gate";
 import AlertDialog, { type AlertRoute } from "@/components/alerts/AlertDialog";
 import { useHydrated, useNow } from "@/lib/useHydrated";
 import {
-  ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, inr, inrIf, monthLabel,
+  ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, dealMonths, inr, inrIf, monthLabel,
 } from "@/lib/fares";
 
 const seg = (on: boolean) =>
@@ -315,19 +315,15 @@ export default function FlightFinder({
                       {st && st.n >= 4 && <PriceRange masked={!open} price={f.price} min={st.min} avg={st.avg} max={st.max} label={`Fare range for ${f.nights} nights`} />}
 
                       {(() => {
-                        const by = datesByMonth(f);
-                        const mos = Object.keys(by).sort();
-                        if (mos.length === 0) return null;
-                        // The page-level month filter decides the month; the card has no month switch of its own.
-                        const shown = month && mos.includes(month) ? month : mos.includes(f.month) ? f.month : mos[0];
-                        const top = by[shown].slice(0, 3);
+                        // The three best dates are always for the current month (November now), whatever month is picked above.
+                        const shown = dealMonths()[0];
+                        const top = (datesByMonth(f)[shown] ?? []).slice(0, 3);
                         const avg = st?.avg;
                         return (
                           <div className="mt-4 border-t border-border pt-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Best dates in {monthLabel(shown)}, {f.nights} nights</p>
-                            </div>
+                            <p className="text-xs text-muted-foreground">Best dates in {monthLabel(shown)}, {f.nights} nights</p>
                             <ol className="mt-2 space-y-1 text-sm" style={{ minHeight: "4.5rem" }}>
+                              {top.length === 0 && <li className="text-xs text-muted-foreground">No priced dates left in {monthLabel(shown).split(" ")[0]} for this trip length.</li>}
                               {top.map((r, k) => {
                                 const off = avg && r.price < avg ? Math.round((1 - r.price / avg) * 100) : 0;
                                 return (
