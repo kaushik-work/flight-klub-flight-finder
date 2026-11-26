@@ -63,7 +63,7 @@ export default function HeroSearch({ nightOptions = [3, 5, 7], destinations }: {
           value={to}
           onChange={setTo}
           options={list.map((f) => ({ slug: f.slug, city: f.city, country: f.country ?? (f.intl ? "International" : "India") }))}
-          anywhere={intl ? "Anywhere abroad" : "Anywhere in India"}
+          anywhere={intl ? "All destinations abroad" : "All cities in India"}
         />
       </div>
       <div>

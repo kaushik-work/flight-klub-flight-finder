@@ -202,7 +202,7 @@ export default function FlightFinder({
         </div>
         <div>
           <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Going to</span>
-          <DestinationPicker value={dest} onChange={setDest} options={destOptions} maskPrices={!member} anywhere={intl ? "Anywhere abroad" : "Anywhere in India"} />
+          <DestinationPicker value={dest} onChange={setDest} options={destOptions} maskPrices={!member} anywhere={intl ? "All destinations abroad" : "All cities in India"} />
         </div>
         <div>
           <span className="font-label mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Trip length</span>
