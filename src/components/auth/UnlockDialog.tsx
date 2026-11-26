@@ -19,6 +19,7 @@ export default function UnlockDialog({ target, onClose }: { target: UnlockTarget
   const [method, setMethod] = useState("upi");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const close = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -33,11 +34,12 @@ export default function UnlockDialog({ target, onClose }: { target: UnlockTarget
   function pay() {
     if (busy) return;
     setBusy(true);
-    // Demo only. The unlock is recorded after the (pretend) payment succeeds, never before.
-    setTimeout(() => {
+    setError("");
+    // Demo only. The unlock is recorded (in the database) after the pretend payment succeeds, never before.
+    setTimeout(async () => {
       if (cardMode && target) {
-        if (auth.unlockCard(target.key)) setDone(`Dates unlocked for ${TRIAL_DAYS} days.`);
-        else setDone("This card is already unlocked.");
+        const err = await auth.unlockCard(target.key);
+        if (err) setError(err); else setDone(`Dates unlocked for ${TRIAL_DAYS} days.`);
       } else {
         const p = planById(planId);
         auth.buyPlan(p.months, p.id);
@@ -104,6 +106,7 @@ export default function UnlockDialog({ target, onClose }: { target: UnlockTarget
             <button onClick={pay} disabled={busy} className="font-label mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60">
               {busy ? "Processing…" : `Pay ₹${cardMode ? TRIAL_PRICE : plan.price}`}
             </button>
+            {error && <p className="mt-3 text-center text-sm text-red-600" role="alert">{error}</p>}
             <p className="mt-3 text-center text-xs text-muted-foreground">Demo checkout: no payment is taken yet.</p>
           </>
         )}

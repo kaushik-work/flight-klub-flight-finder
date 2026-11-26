@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useState } from "react";
 import { updateProfile } from "firebase/auth";
-import { TRIAL_UNLOCKS, trialLeft, useAuth } from "@/components/auth/AuthProvider";
+import { cardLabel, TRIAL_UNLOCKS, trialLeft, useAuth } from "@/components/auth/AuthProvider";
 import { firebaseAuth } from "@/lib/firebase/client";
 import DestinationPicker from "@/components/DestinationPicker";
 import { ArrowRight, Bell, CheckBadge } from "@/components/Icons";
@@ -136,6 +136,26 @@ export default function AccountView() {
                     {left! > 30 ? `Your membership runs until ${fmt(user.renews!)}.` : left! > 0 ? "Your membership is about to end. Renewal will open here." : "Your membership has ended, so dates and alerts are locked."}
                   </p>
                 </>
+              ) : user.trial ? (
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Your trial: {TRIAL_UNLOCKS} date unlocks at ₹89 each, once per account. <span className="font-semibold text-foreground">{trialLeft(user) === 0 ? "All used." : `${trialLeft(user)} of ${TRIAL_UNLOCKS} left.`}</span>
+                  </p>
+                  {user.trial.unlocks.length > 0 && (
+                    <ul className="mt-3 space-y-2 text-sm">
+                      {user.trial.unlocks.map((u) => {
+                        const days = Math.ceil((new Date(u.until).getTime() - now) / DAY);
+                        return (
+                          <li key={`${u.key}-${u.until}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2.5">
+                            <span className="font-semibold">{cardLabel(u.key)}</span>
+                            <span className={days > 0 ? "text-xs text-price" : "text-xs text-muted-foreground"}>{days > 0 ? `${days} day${days === 1 ? "" : "s"} left` : "Expired"}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <p className="mt-3 text-xs text-muted-foreground">Each unlock shows one fare&apos;s dates for 7 days. After the {TRIAL_UNLOCKS} unlocks, a plan (₹399 for 3 months, ₹999 for 12 months) shows every date.</p>
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   You are logged in, but there is no active membership on this account. Membership starts when you complete payment at sign-up, and it unlocks exact travel dates and price-drop alerts.

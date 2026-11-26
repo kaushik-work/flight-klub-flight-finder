@@ -17,6 +17,12 @@ export const TRIAL_PRICE = 89; // rupees per card, GST included
 export const TRIAL_DAYS = 7;
 const DAY_MS = 86_400_000;
 
+/** "mumbai:bali:5" as "Mumbai to Bali, 5 nights", for lists. */
+export function cardLabel(key: string): string {
+  const [o = "", d = "", n = ""] = key.split(":");
+  const t = (x: string) => x.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return `${t(o)} to ${t(d)}, ${n} nights`;
+}
 export const cardKey = (origin: string, dest: string, nights: number) => `${origin}:${dest}:${nights}`;
 
 /**
@@ -29,8 +35,7 @@ export function isMember(user: User | null, now = Date.now()): boolean {
   return !user.trial;
 }
 export const unlockedUntil = (user: User | null, key: string, now = Date.now()): number | null => {
-  const u = user?.trial?.unlocks.find((x) => x.key === key);
-  const t = u ? new Date(u.until).getTime() : 0;
+  const t = Math.max(0, ...(user?.trial?.unlocks ?? []).filter((x) => x.key === key).map((x) => new Date(x.until).getTime()));
   return t > now ? t : null;
 };
 /** Trial unlocks still available to buy: 3 minus every one ever bought, active or not. */
@@ -55,8 +60,8 @@ type Ctx = {
   alerts: Alert[];
   login: (u: User) => void;
   updateUser: (patch: Partial<Pick<User, "name" | "city" | "email">>) => void;
-  /** Record a paid card unlock (7 days). Returns false when the trial is used up or the card is already open. */
-  unlockCard: (key: string) => boolean;
+  /** Record a paid card unlock (7 days) in the database. Resolves to an error message, or null when it worked. */
+  unlockCard: (key: string) => Promise<string | null>;
   /** Record a paid plan on this account. */
   buyPlan: (months: number, planId: string) => void;
   logout: () => void;
@@ -104,14 +109,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(next);
     save(next, alerts);
   }, [user, alerts]);
-  const unlockCard = useCallback((key: string) => {
-    if (!user?.trial || trialLeft(user) === 0 || unlockedUntil(user, key)) return false;
+  const withTrial = useCallback((trial: Trial) => {
+    setUser((u) => {
+      if (!u) return u;
+      const next = { ...u, trial };
+      save(next, alerts);
+      return next;
+    });
+  }, [alerts]);
+
+  // The database is the record: on load (and after login) take the trial from the server, so the unlocks used and the
+  // cards opened are the same on every device and survive a cleared browser.
+  const phone = user?.phone;
+  useEffect(() => {
+    if (!phone) return;
+    let live = true;
+    fetch("/api/unlocks").then((r) => (r.ok ? r.json() : null)).then((d) => { if (live && d?.trial) withTrial(d.trial as Trial); }).catch(() => {});
+    return () => { live = false; };
+  }, [phone, withTrial]);
+
+  const unlockCard = useCallback(async (key: string): Promise<string | null> => {
+    if (!user?.trial) return "Trial is not available on this account.";
+    if (unlockedUntil(user, key)) return null;
+    try {
+      const r = await fetch("/api/unlocks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) });
+      if (r.ok) { withTrial((await r.json()).trial as Trial); return null; }
+      if (r.status === 409) { const d = await r.json().catch(() => null); if (d?.trial) withTrial(d.trial as Trial); return `All ${TRIAL_UNLOCKS} trial unlocks are used. Choose a plan to see more dates.`; }
+      if (r.status === 401 || r.status === 403) return "Please log in again to unlock dates.";
+      if (r.status !== 503) return "Could not record the unlock. Nothing was charged. Please try again.";
+    } catch { return "Could not reach the server. Nothing was charged. Please try again."; }
+    // 503: server login is not set up (local demo), so the trial stays in this browser.
+    if (trialLeft(user) === 0) return `All ${TRIAL_UNLOCKS} trial unlocks are used. Choose a plan to see more dates.`;
     const until = new Date(Date.now() + TRIAL_DAYS * DAY_MS).toISOString();
-    const next: User = { ...user, trial: { bought: user.trial.bought + 1, unlocks: [...user.trial.unlocks.filter((x) => x.key !== key), { key, until }] } };
-    setUser(next);
-    save(next, alerts);
-    return true;
-  }, [user, alerts]);
+    withTrial({ bought: user.trial.bought + 1, unlocks: [...user.trial.unlocks.filter((x) => x.key !== key), { key, until }] });
+    return null;
+  }, [user, withTrial]);
   const buyPlan = useCallback((months: number, planId: string) => {
     if (!user) return;
     const now = new Date();

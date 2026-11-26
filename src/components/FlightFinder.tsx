@@ -281,7 +281,10 @@ export default function FlightFinder({
                         <div className="min-w-0">
                           <dt className="text-xs text-muted-foreground">Dates</dt>
                           {open ? (
-                            <dd className="t-num mt-0.5 truncate font-semibold">{formatRange(f.dep, f.ret)}</dd>
+                            <dd className="mt-0.5 min-w-0">
+                              <span className="t-num block truncate font-semibold">{formatRange(f.dep, f.ret)}</span>
+                              {!member && <span className="block text-[11px] text-price">Unlocked · {Math.ceil(((unlockedUntil(user, cardKey(origin.slug, f.d, f.nights), now) ?? now) - now) / 86_400_000)} days left</span>}
+                            </dd>
                           ) : (
                             <dd className="mt-0.5 flex items-center gap-1.5 font-semibold">
                               <span className="t-num select-none truncate blur-[5px]" aria-hidden>{formatRange(f.dep, f.ret)}</span>
