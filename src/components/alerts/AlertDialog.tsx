@@ -141,12 +141,9 @@ export default function AlertDialog({ route, onClose, onUpgrade, onGate }: { rou
             </div>
           ) : (
           <div className="mt-5">
-            <Link href={`/signup?next=${next}`} className="font-label flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
+            <Link href={`/login?next=${next}`} className="font-label flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
               Unlock alerts · {MEMBERSHIP_LABEL}<ArrowRight className="ml-1.5" />
             </Link>
-            <p className="mt-3 text-center text-sm text-muted-foreground">
-              Already a member? <Link href={`/login?next=${next}`} className="font-semibold text-primary hover:underline">Log in</Link>
-            </p>
           </div>
           )
         )}

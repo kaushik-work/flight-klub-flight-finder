@@ -90,7 +90,7 @@ function GoogleIcon() {
   );
 }
 
-export default function AuthForm({ mode, next, sample, plan: planParam, gate }: { mode: Mode; next: string; sample: Sample | null; plan?: string; gate?: { card: GateCard; offer: GateOffer } | null }) {
+export default function AuthForm({ mode, next, sample, plan: planParam, gate, embedded = false }: { mode: Mode; next: string; sample: Sample | null; plan?: string; gate?: { card: GateCard; offer: GateOffer } | null; embedded?: boolean }) {
   const router = useRouter();
   const { login, user, ready } = useAuth();
   const signup = mode === "signup";
@@ -292,12 +292,10 @@ export default function AuthForm({ mode, next, sample, plan: planParam, gate }: 
   const panelSub = waitlist
     ? "Join the waitlist and we will message you when a spot opens."
     : `Members see the exact dates and get price-drop alerts. ${PLANS_SENTENCE}.`;
-  const tab = (on: boolean) => `flex h-10 items-center justify-center rounded-lg text-sm font-semibold transition ${on ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`;
-  const other = (path: string) => `${path}?next=${encodeURIComponent(next)}`;
 
   return (
-    <div className="grid min-h-[calc(100vh-4rem)] bg-white lg:grid-cols-[1fr_1fr]">
-      <section className="flex items-center justify-center px-5 py-10 sm:px-10">
+    <div className={embedded ? "bg-white" : "grid min-h-[calc(100vh-4rem)] bg-white lg:grid-cols-[1fr_1fr]"}>
+      <section className={`flex items-center justify-center ${embedded ? "px-1 py-2" : "px-5 py-10 sm:px-10"}`}>
         <div className="w-full max-w-sm text-center">
           <div id="recaptcha-box" />
           {step === "done" ? (
@@ -311,7 +309,7 @@ export default function AuthForm({ mode, next, sample, plan: planParam, gate }: 
               {signup && !waitlist && step !== "details" && (
                 <p className="mb-2 text-sm font-medium text-muted-foreground">Step {stepNo} of 3</p>
               )}
-              <h1 className="text-3xl font-extrabold tracking-tight">
+              <h1 className={`${embedded ? "text-2xl" : "text-3xl"} font-extrabold tracking-tight`}>
                 {step === "pay" ? "Complete payment" : step === "name" ? "What should we call you?" : step === "otp" ? "Enter the code" : google ? "Add your mobile number" : waitlist ? "Join the waitlist" : signup ? "Create your account" : "Welcome back"}
               </h1>
               <p className="mt-2 text-[15px] text-muted-foreground">
@@ -325,12 +323,6 @@ export default function AuthForm({ mode, next, sample, plan: planParam, gate }: 
                   : signup ? "Use your mobile number. You pay after it is verified." : "Log in with your mobile number to see dates and alerts."}
               </p>
 
-              {step === "details" && !google && (
-                <div className="mt-6 grid grid-cols-2 rounded-xl bg-muted p-1" role="tablist" aria-label="Log in or sign up">
-                  <Link href={other("/login")} role="tab" aria-selected={!signup} className={tab(!signup)}>Log in</Link>
-                  <Link href={other("/signup")} role="tab" aria-selected={signup} className={tab(signup)}>Sign up</Link>
-                </div>
-              )}
 
               {step === "pay" ? (
                 <div className="mt-8 space-y-6 text-left">
@@ -493,7 +485,7 @@ export default function AuthForm({ mode, next, sample, plan: planParam, gate }: 
         </div>
       </section>
 
-      <aside className="hidden p-4 lg:block">
+      {!embedded && <aside className="hidden p-4 lg:block">
         <div className="flex h-full min-h-[34rem] flex-col items-center justify-center rounded-3xl bg-[#f6e3df] p-10 xl:p-14">
           <div className="w-full max-w-sm">
             <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-[#2a0f12] xl:text-4xl">{panelHead}</h2>
@@ -508,7 +500,7 @@ export default function AuthForm({ mode, next, sample, plan: planParam, gate }: 
             <p className="mt-12 text-sm text-[#2a0f12]/60">Need help? <a href={`mailto:${EMAIL}`} className="underline underline-offset-2 hover:text-[#2a0f12]">{EMAIL}</a></p>
           </div>
         </div>
-      </aside>
+      </aside>}
     </div>
   );
 }

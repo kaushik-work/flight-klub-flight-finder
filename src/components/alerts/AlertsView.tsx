@@ -55,7 +55,7 @@ export default function AlertsView({ routes }: { routes: RouteFare[] }) {
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white"><Lock className="h-5 w-5" /></span>
                 <p className="t-title mt-3 text-2xl">Unlock price alerts</p>
                 <p className="mt-1 max-w-sm text-sm text-muted-foreground">Members choose a target price on any route and get alerted when fares reach it. {MEMBERSHIP_LABEL}.</p>
-                <Link href="/signup?next=/alerts" className="font-label mt-5 inline-flex h-12 items-center rounded-xl bg-primary px-8 text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
+                <Link href="/login?next=/alerts" className="font-label mt-5 inline-flex h-12 items-center rounded-xl bg-primary px-8 text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
                   Unlock alerts<ArrowRight className="ml-1.5" />
                 </Link>
                 <p className="mt-3 text-sm text-muted-foreground">Already a member? <Link href="/login?next=/alerts" className="font-semibold text-primary hover:underline">Log in</Link></p>

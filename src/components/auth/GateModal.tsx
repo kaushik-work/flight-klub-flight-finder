@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import AuthForm from "@/components/auth/AuthForm";
 import { ArrowRight, Bell, Lock } from "@/components/Icons";
 import { TRIAL_DAYS, TRIAL_PRICE } from "@/components/auth/AuthProvider";
-import { type GateCard, type GateOffer, signupUrl } from "@/lib/gate";
+import { type GateCard, type GateOffer, finderUrl } from "@/lib/gate";
 import { inrMasked } from "@/lib/fares";
 import { PLANS } from "@/lib/site";
 
@@ -13,7 +13,8 @@ import { PLANS } from "@/lib/site";
  * number and the code we text them, and they pay. Either way the fare they tapped ends up open with a price alert on it.
  */
 export default function GateModal({ card, onClose }: { card: GateCard; onClose: () => void }) {
-  const router = useRouter();
+  // Step 1 picks what to buy; step 2 is the mobile number, the code we text and the payment, all in this window.
+  const [chosen, setChosen] = useState<GateOffer | null>(null);
   const close = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function GateModal({ card, onClose }: { card: GateCard; onClose: 
     return () => { document.removeEventListener("keydown", esc); document.body.style.overflow = prev; };
   }, [onClose]);
 
-  const go = (offer: GateOffer) => router.push(signupUrl(card, offer));
+  const go = (offer: GateOffer) => setChosen(offer);
   const options: { offer: GateOffer; title: string; price: number; note: string; best?: boolean }[] = [
     { offer: "unlock", title: "Just this fare", price: TRIAL_PRICE, note: `Exact dates for ${card.city}, open for ${TRIAL_DAYS} days` },
     { offer: "3m", title: PLANS[0].name, price: PLANS[0].price, note: "Dates and alerts on every fare" },
@@ -45,6 +46,12 @@ export default function GateModal({ card, onClose }: { card: GateCard; onClose: 
           <button ref={close} onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-lg text-muted-foreground transition hover:bg-muted">×</button>
         </div>
 
+        {chosen ? (
+          <div className="mt-4">
+            <button onClick={() => setChosen(null)} className="text-xs font-semibold text-primary hover:underline">← Change plan</button>
+            <AuthForm mode="signup" next={finderUrl(card)} sample={null} gate={{ card, offer: chosen }} embedded />
+          </div>
+        ) : (<>
         <p className="mt-5 text-sm font-semibold">Choose how to unlock</p>
         <ul className="mt-2 space-y-2.5">
           {options.map((o) => (
@@ -67,6 +74,7 @@ export default function GateModal({ card, onClose }: { card: GateCard; onClose: 
           <Bell className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>We then ask for your mobile number and a code we text you. Whatever you choose, this fare opens on its own and we set a price alert on it for you. GST included.</span>
         </p>
+        </>)}
       </div>
     </div>
   );

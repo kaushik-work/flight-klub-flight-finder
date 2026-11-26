@@ -65,9 +65,7 @@ export default function HeaderActions() {
       ) : (
         <>
           <Link href="/login" aria-current={on(path, "/login") ? "page" : undefined}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition sm:px-4 sm:py-2 ${on(path, "/login") ? "bg-secondary font-semibold text-primary ring-1 ring-primary/30" : "text-foreground hover:text-primary"}`}>Log in</Link>
-          <Link href="/signup" aria-current={on(path, "/signup") ? "page" : undefined}
-            className={`whitespace-nowrap rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground transition hover:opacity-90 sm:px-4 sm:py-2 ${on(path, "/signup") ? "ring-4 ring-primary/25" : ""}`}>Sign up</Link>
+            className={`whitespace-nowrap rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground transition hover:opacity-90 sm:px-4 sm:py-2 ${on(path, "/login") ? "ring-4 ring-primary/25" : ""}`}>Log in</Link>
         </>
       )}
     </nav>

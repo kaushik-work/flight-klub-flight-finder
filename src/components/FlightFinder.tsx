@@ -247,7 +247,7 @@ export default function FlightFinder({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">{results.length} destinations</p>
           {ready && !user && (
-            <Link href="/signup?next=/flight-finder" className="font-label flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground transition hover:bg-primary hover:text-primary-foreground">
+            <Link href="/login?next=/flight-finder" className="font-label flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground transition hover:bg-primary hover:text-primary-foreground">
               <Lock className="mr-1.5" />Members unlock exact dates and price-drop alerts · from ₹399<ArrowRight className="ml-1.5" />
             </Link>
           )}
