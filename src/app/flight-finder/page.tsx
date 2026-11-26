@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import FlightFinder from "@/components/FlightFinder";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import { DEFAULT_ORIGIN, DESTINATIONS, type Row, dealMonths, findOrigin, resolveDest } from "@/lib/fares";
+import { DEFAULT_ORIGIN, DESTINATIONS, type Row, dealMonths, daysLeftInMonth, findOrigin, resolveDest } from "@/lib/fares";
 import { getBaggageLinks, getOriginRows } from "@/lib/flight-fares/store";
 import { SITE_URL, jsonLd } from "@/lib/site";
 
@@ -70,7 +70,7 @@ async function FinderContent({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
-      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} baggage={baggage} initialDest={dest} initialNights={n} initialMonth={m} fromExplicit={!!findOrigin(from)} />
+      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} baggage={baggage} showBest={daysLeftInMonth() > 6} initialDest={dest} initialNights={n} initialMonth={m} fromExplicit={!!findOrigin(from)} />
     </>
   );
 }

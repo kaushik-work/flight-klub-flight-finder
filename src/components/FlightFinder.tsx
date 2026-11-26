@@ -38,6 +38,7 @@ export default function FlightFinder({
   origin,
   rows,
   baggage = {},
+  showBest = true,
   initialDest = "",
   initialNights = null,
   initialMonth = null,
@@ -46,6 +47,8 @@ export default function FlightFinder({
   origin: Origin;
   rows: Row[];
   baggage?: Record<string, string>;
+  /** False when the current month is nearly over (6 days or fewer left): the best-dates list is then left out. */
+  showBest?: boolean;
   initialDest?: string;
   initialNights?: number | null;
   initialMonth?: string | null;
@@ -327,6 +330,7 @@ export default function FlightFinder({
                       {st && st.n >= 4 && <PriceRange masked={!open} price={f.price} min={st.min} avg={st.avg} max={st.max} label={`Fare range for ${f.nights} nights`} />}
 
                       {(() => {
+                        if (!showBest) return null;
                         // The three best dates are always for the current month (November now), whatever month is picked above.
                         const shown = dealMonths()[0];
                         const top = (datesByMonth(f)[shown] ?? []).slice(0, 3);

@@ -106,6 +106,12 @@ export function dealMonths(now = new Date(), ahead = 3): string[] {
   });
 }
 
+/** Days left in the current month by Indian time, counting today: on 26 Nov it is 5. */
+export function daysLeftInMonth(now = new Date()): number {
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(now).split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate() - d + 1;
+}
+
 export const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 /** A price with the first digit and the last two visible, one X per hidden digit: 22,287 reads ₹2XX87 and 104,500 reads ₹1XXX00. */
 export const inrMasked = (n: number) => {
