@@ -107,10 +107,10 @@ export function dealMonths(now = new Date(), ahead = 3): string[] {
 }
 
 export const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
-/** A price with only the first and last digit visible, one X per hidden digit: 22,287 reads ₹2XXX7 and 104,500 reads ₹1XXXX0. */
+/** A price with the first digit and the last two visible, one X per hidden digit: 22,287 reads ₹2XX87 and 104,500 reads ₹1XXX00. */
 export const inrMasked = (n: number) => {
   const d = String(Math.round(n));
-  return d.length <= 2 ? `₹${d}` : `₹${d[0]}${"X".repeat(d.length - 2)}${d[d.length - 1]}`;
+  return d.length <= 3 ? `₹${d}` : `₹${d[0]}${"X".repeat(d.length - 3)}${d.slice(-2)}`;
 };
 /** Shows the real price, or the masked one while it is still locked. */
 export const inrIf = (open: boolean, n: number) => (open ? inr(n) : inrMasked(n));
