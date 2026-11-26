@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useState } from "react";
 import { updateProfile } from "firebase/auth";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { TRIAL_UNLOCKS, trialLeft, useAuth } from "@/components/auth/AuthProvider";
 import { firebaseAuth } from "@/lib/firebase/client";
 import DestinationPicker from "@/components/DestinationPicker";
 import { ArrowRight, Bell, CheckBadge } from "@/components/Icons";
@@ -60,7 +60,8 @@ export default function AccountView() {
   const planInfo = PLANS.find((p) => p.id === user.plan);
   const planName = planInfo ? planInfo.name : months ? `${months} month${months === 1 ? "" : "s"}` : "";
   const status =
-    left === null ? { t: "No active membership", c: "bg-white/20 text-white" }
+    left === null && user.trial ? { t: `Trial: ${trialLeft(user)} of ${TRIAL_UNLOCKS} unlocks left`, c: "bg-white/20 text-white" }
+    : left === null ? { t: "No active membership", c: "bg-white/20 text-white" }
     : left <= 0 ? { t: "Expired", c: "bg-red-100 text-red-700" }
     : left <= 30 ? { t: `Expires in ${left} day${left === 1 ? "" : "s"}`, c: "bg-amber-100 text-amber-800" }
     : { t: "Active", c: "bg-green-100 text-green-700" };

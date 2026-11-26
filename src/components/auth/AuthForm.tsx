@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import { authMessage, firebaseAuth, startSession } from "@/lib/firebase/client";
 import { ORIGINS } from "@/lib/fares";
+import { TRIAL_DAYS, TRIAL_PRICE, TRIAL_UNLOCKS } from "@/components/auth/AuthProvider";
 import { addMonths, EMAIL, PLANS, PLANS_SENTENCE, planById, SIGNUPS_FULL } from "@/lib/site";
 import DestinationPicker from "@/components/DestinationPicker";
 import PriceTag from "@/components/PriceTag";
@@ -238,6 +239,13 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
     }, 900);
   }
 
+  // The one-time trial: skip the plan, then unlock up to three cards at ₹89 each from the finder.
+  function startTrial() {
+    login({ name: name.trim() || "Member", phone, city, email: google?.email, trial: { bought: 0, unlocks: [] } });
+    setStep("done");
+    setTimeout(() => router.push(next), 1100);
+  }
+
   const stepNo = step === "details" ? 1 : step === "otp" ? 2 : 3;
   const panelHead = waitlist ? "Founding spots are full." : signup ? "The dates behind every low fare." : "Your fares are waiting.";
   const panelSub = waitlist
@@ -312,6 +320,10 @@ export default function AuthForm({ mode, next, sample, plan: planParam }: { mode
                   </fieldset>
                   <button onClick={pay} disabled={busy} className={primaryBtn}>{busy ? "Processing…" : `Pay ₹${plan.price}`}</button>
                   <p className="text-center text-xs text-muted-foreground">Demo checkout: no payment is taken yet.</p>
+                  <button type="button" onClick={startTrial} disabled={busy} className="font-label w-full rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition hover:border-primary/50 disabled:opacity-60">
+                    Not ready? Try {TRIAL_UNLOCKS} fares first at ₹{TRIAL_PRICE} each
+                  </button>
+                  <p className="text-center text-xs text-muted-foreground">Once per account, GST included. Each unlock shows one fare&apos;s dates for {TRIAL_DAYS} days.</p>
                 </div>
               ) : step === "details" ? (
                 <form onSubmit={sendOtp} noValidate className={`space-y-3 text-left ${google ? "mt-8" : "mt-5"}`}>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { alertId, useAuth } from "@/components/auth/AuthProvider";
+import { alertId, isMember, useAuth } from "@/components/auth/AuthProvider";
 import { ArrowRight, Bell, CheckBadge, Lock } from "@/components/Icons";
 import { inr } from "@/lib/fares";
 import { MEMBERSHIP_LABEL } from "@/lib/site";
@@ -20,10 +20,12 @@ const round100 = (n: number) => Math.max(100, Math.round(n / 100) * 100);
  * Where a member sets the price they are waiting for on one route. Visitors see the same screen locked,
  * with the option to unlock alerts.
  */
-export default function AlertDialog({ route, onClose }: { route: AlertRoute; onClose: () => void }) {
+export default function AlertDialog({ route, onClose, onUpgrade }: { route: AlertRoute; onClose: () => void; onUpgrade?: () => void }) {
   const hydrated = useHydrated();
   const auth = useAuth();
-  const user = hydrated ? auth.user : null;
+  const account = hydrated ? auth.user : null;
+  // Alerts are a member feature; an account on the date-unlock trial sees them locked until it buys a plan.
+  const user = account && isMember(account) ? account : null;
   const existing = auth.alerts.find((a) => a.id === alertId(route.origin, route.dest));
   const [target, setTarget] = useState(String(existing?.target ?? (route.price ? round100(route.price * 0.9) : "")));
   const [err, setErr] = useState("");
@@ -125,6 +127,13 @@ export default function AlertDialog({ route, onClose }: { route: AlertRoute; onC
             )}
           </div>
         ) : (
+          account && onUpgrade ? (
+            <div className="mt-5">
+              <button onClick={onUpgrade} className="font-label flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
+                Get a plan for alerts<ArrowRight className="ml-1.5" />
+              </button>
+            </div>
+          ) : (
           <div className="mt-5">
             <Link href={`/signup?next=${next}`} className="font-label flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-primary-foreground transition hover:opacity-90">
               Unlock alerts · {MEMBERSHIP_LABEL}<ArrowRight className="ml-1.5" />
@@ -133,6 +142,7 @@ export default function AlertDialog({ route, onClose }: { route: AlertRoute; onC
               Already a member? <Link href={`/login?next=${next}`} className="font-semibold text-primary hover:underline">Log in</Link>
             </p>
           </div>
+          )
         )}
         {saved && user && (
           <p className="mt-3 text-center text-sm">

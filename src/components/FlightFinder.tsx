@@ -8,9 +8,10 @@ import PriceTag from "@/components/PriceTag";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState, useTransition } from "react";
 import { useHomeOrigin } from "@/components/location/LocationProvider";
-import { alertId, useAuth } from "@/components/auth/AuthProvider";
+import { alertId, cardKey, isMember, TRIAL_PRICE, TRIAL_UNLOCKS, trialLeft, unlockedUntil, useAuth } from "@/components/auth/AuthProvider";
+import UnlockDialog, { type UnlockTarget } from "@/components/auth/UnlockDialog";
 import AlertDialog, { type AlertRoute } from "@/components/alerts/AlertDialog";
-import { useHydrated } from "@/lib/useHydrated";
+import { useHydrated, useNow } from "@/lib/useHydrated";
 import {
   ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, inr, monthLabel,
 } from "@/lib/fares";
@@ -57,6 +58,13 @@ export default function FlightFinder({
   const user = hydrated ? auth.user : null;
   const alerts = hydrated ? auth.alerts : [];
   const [alertFor, setAlertFor] = useState<AlertRoute | null>(null);
+  const [unlockFor, setUnlockFor] = useState<UnlockTarget | null>(null);
+  const member = isMember(user);
+  const left = trialLeft(user);
+  const now = useNow();
+  // Exact dates show for members, and for a trial account on the cards it has unlocked.
+  const datesOpen = (f: Row) => member || unlockedUntil(user, cardKey(origin.slug, f.d, f.nights), now) !== null;
+  const openUnlock = (f: Row) => setUnlockFor({ key: cardKey(origin.slug, f.d, f.nights), label: `${f.city}, ${f.nights} nights` });
   const { origin: near, setUserOrigin } = useHomeOrigin();
 
   // No city in the URL: use the nearest airport once it is known.
@@ -227,6 +235,11 @@ export default function FlightFinder({
               <Lock className="mr-1.5" />Members unlock exact dates and price-drop alerts · from ₹399<ArrowRight className="ml-1.5" />
             </Link>
           )}
+          {user && !member && (
+            <button onClick={() => setUnlockFor({ key: "", label: "" })} className="font-label flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground transition hover:bg-primary hover:text-primary-foreground">
+              <Lock className="mr-1.5" />{left > 0 ? `Trial: ${left} of ${TRIAL_UNLOCKS} date unlocks left · ₹${TRIAL_PRICE} each` : "Trial used · get a plan for every date"}<ArrowRight className="ml-1.5" />
+            </button>
+          )}
           {user && alerts.length > 0 && (
             <Link href="/alerts" className="font-label text-xs font-semibold text-primary hover:underline"><BellOn className="mr-1" />{alerts.length} price alert{alerts.length > 1 ? "s" : ""} on<ArrowRight className="ml-1.5" /></Link>
           )}
@@ -244,6 +257,7 @@ export default function FlightFinder({
               const stops = formatStops(f.stops);
               const dur = formatDuration(f.mins);
               const st = statFor(f);
+              const open = datesOpen(f);
               return (
                 <li key={f.d} style={{ "--i": i } as CSSProperties} className="ticket-shell reveal">
                   <div className="ticket" style={{ "--y": "calc(100% - 5.25rem)" } as CSSProperties}>
@@ -266,7 +280,7 @@ export default function FlightFinder({
                       <dl className="mt-5 grid gap-3 border-t border-border pt-4 text-sm" style={{ gridTemplateColumns: "1.5fr 1fr 1fr" }}>
                         <div className="min-w-0">
                           <dt className="text-xs text-muted-foreground">Dates</dt>
-                          {user ? (
+                          {open ? (
                             <dd className="t-num mt-0.5 truncate font-semibold">{formatRange(f.dep, f.ret)}</dd>
                           ) : (
                             <dd className="mt-0.5 flex items-center gap-1.5 font-semibold">
@@ -295,7 +309,7 @@ export default function FlightFinder({
                                   <li key={r.dep} className="flex items-center justify-between gap-3">
                                     <span className="flex min-w-0 items-center gap-2">
                                       <span className="w-4 text-xs text-muted-foreground">{k + 1}</span>
-                                      {user ? (
+                                      {open ? (
                                         <span className="t-num truncate font-semibold">{formatRange(r.dep, r.ret)}</span>
                                       ) : (
                                         <span className="t-num select-none truncate font-semibold blur-[5px]" aria-hidden>{formatRange(r.dep, r.ret)}</span>
@@ -329,7 +343,7 @@ export default function FlightFinder({
                       <div className="min-w-0">
                         <PriceTag price={f.price} avg={st?.avg} size="lg" />
                       </div>
-                      {user ? (
+                      {open ? (
                         <div className="flex shrink-0 gap-2">
                           <a
                             href={fareLink(origin.code, f.code, f.dep, f.ret)}
@@ -339,7 +353,14 @@ export default function FlightFinder({
                           >
                             View fare<ArrowUpRight className="ml-1.5" />
                           </a>
-                          <AlertBell on={hasAlert(f.d)} onClick={() => openAlert(f)} />
+                          <AlertBell on={hasAlert(f.d)} locked={!member} onClick={() => openAlert(f)} />
+                        </div>
+                      ) : user ? (
+                        <div className="flex shrink-0 gap-2">
+                          <button onClick={() => openUnlock(f)} className="font-label flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
+                            {left > 0 ? `Unlock dates · ₹${TRIAL_PRICE}` : "Get a plan"}<ArrowRight className="ml-1.5" />
+                          </button>
+                          <AlertBell on={false} locked onClick={() => openAlert(f)} />
                         </div>
                       ) : (
                         <div className="flex shrink-0 gap-2">
@@ -360,7 +381,8 @@ export default function FlightFinder({
           Round-trip fares in rupees{lastSeen ? `, last checked ${formatDay(lastSeen)}` : ""}. Each fare is the lowest we found on the dates we checked for that month and trip length, and &quot;below average&quot; compares it with the same trip length on the same route. Prices change often, so confirm the final fare before you book.
         </p>
       </section>
-      {alertFor && <AlertDialog route={alertFor} onClose={() => setAlertFor(null)} />}
+      {alertFor && <AlertDialog route={alertFor} onClose={() => setAlertFor(null)} onUpgrade={!member && user ? () => { setAlertFor(null); setUnlockFor({ key: "", label: "" }); } : undefined} />}
+      {unlockFor && <UnlockDialog target={unlockFor.key ? unlockFor : null} onClose={() => setUnlockFor(null)} />}
     </main>
   );
 }
