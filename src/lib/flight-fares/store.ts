@@ -59,7 +59,7 @@ async function loadOrigin(origin: string): Promise<Row[]> {
   "use cache";
   cacheLife({ stale: 300, revalidate: 1800, expire: 86400 });
   cacheTag("flight-fares");
-  const docs = (await (await getFaresDb()).collection(COLLECTION).find({ originSlug: origin }).sort({ price: 1 }).limit(3000).toArray()) as unknown as Doc[];
+  const docs = (await (await getFaresDb()).collection(COLLECTION).find({ originSlug: origin }).sort({ price: 1 }).limit(30000).toArray()) as unknown as Doc[];
   return docs.filter(usable).map((f) => ({ id: f.id ?? `${origin}-${f.destinationSlug}-${f.departureDate}-${f.nights}`, ...base(f) }));
 }
 

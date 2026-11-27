@@ -6,13 +6,16 @@ import { FARES_COLLECTION, getFaresDb } from "@/lib/flight-fares/store";
 // Ingest endpoint for the fare scraper (the fk-flight-finder repo).
 //
 //   POST /api/flight-fares    x-fare-secret: <FARE_INGEST_SECRET>
-//     { originSlug, fares[] }  replaces every stored fare for that origin
+//     { originSlug, fares[] }  updates those fares in place and keeps the origin's other fares for KEEP_DAYS
 //
 // Only POST exists: the site reads the database directly, so there is no public read API.
 
 // A pass returning under this share of what is stored is treated as a degraded scrape (blocked half way,
 // a payload change), not as the truth, and is refused unless the caller sends allowShrink: true.
 const MIN_KEEP_RATIO = 0.5;
+
+// How long a fare that has not been priced again is kept. 8 days so that every weekday the scraper rotates through is in the store.
+const KEEP_DAYS = 8;
 
 type Fare = Record<string, unknown> & { destinationSlug?: unknown; departureDate?: unknown; price?: unknown };
 
@@ -84,22 +87,42 @@ export async function POST(request: NextRequest) {
   try {
     const col = (await getFaresDb()).collection(FARES_COLLECTION);
     const batchId = new Date().toISOString();
-    const rows = fares.map((f) => ({ ...f, originSlug, storedAt: batchId, batchId }));
 
-    const existing = await col.countDocuments({ originSlug });
-    if (existing > 0 && fares.length < existing * MIN_KEEP_RATIO && body.allowShrink !== true) {
+    // The degraded-scrape guard compares with the size of the previous pass (its batch), not with everything stored,
+    // because fares are now kept for several days and the store holds more than one pass.
+    const last = await col.find({ originSlug }, { projection: { batchId: 1 } }).sort({ storedAt: -1 }).limit(1).next();
+    const previous = last?.batchId ? await col.countDocuments({ originSlug, batchId: last.batchId }) : 0;
+    if (previous > 0 && fares.length < previous * MIN_KEEP_RATIO && body.allowShrink !== true) {
       return Response.json(
-        { success: false, error: `Refusing to replace ${existing} stored fares with ${fares.length}: looks like a degraded scrape. Send allowShrink: true if this is intended.` },
+        { success: false, error: `Refusing to store ${fares.length} fares after a pass of ${previous}: looks like a degraded scrape. Send allowShrink: true if this is intended.` },
         { status: 409 },
       );
     }
 
-    // Insert the new batch first, then remove the old one, so a failure leaves yesterday's prices in place.
-    await col.insertMany(rows);
-    await col.deleteMany({ originSlug, batchId: { $ne: batchId } });
+    // Upsert on the trip itself (origin, destination, both dates), so a fare that is priced again is updated in place and
+    // one that is not priced this pass is kept until it is KEEP_DAYS old. The scraper rotates the weekdays it samples, so
+    // the days together give every weekday, and a date someone looked at yesterday is still there today.
+    await col.createIndex({ originSlug: 1, destinationSlug: 1, departureDate: 1, returnDate: 1 }).catch(() => {});
+    for (let i = 0; i < fares.length; i += 1000) {
+      await col.bulkWrite(
+        fares.slice(i, i + 1000).map((f) => ({
+          updateOne: {
+            filter: { originSlug, destinationSlug: f.destinationSlug, departureDate: f.departureDate, returnDate: f.returnDate },
+            update: { $set: { ...f, originSlug, storedAt: batchId, batchId } },
+            upsert: true,
+          },
+        })),
+        { ordered: false },
+      );
+    }
+
+    // Remove what has aged out, and trips that have already left. A failure above leaves everything as it was.
+    const cutoff = new Date(Date.now() - KEEP_DAYS * 86_400_000).toISOString();
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+    const removed = await col.deleteMany({ originSlug, $or: [{ retrievedAt: { $lt: cutoff } }, { departureDate: { $lt: today } }] });
 
     revalidateTag("flight-fares", { expire: 0 });
-    return Response.json({ success: true, stored: rows.length, skipped: submitted.length - fares.length });
+    return Response.json({ success: true, stored: fares.length, skipped: submitted.length - fares.length, removed: removed.deletedCount });
   } catch (error) {
     console.error("flight-fares ingest failed", error);
     return Response.json({ success: false, error: "Could not store fares" }, { status: 500 });

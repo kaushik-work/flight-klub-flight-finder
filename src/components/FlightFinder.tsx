@@ -15,7 +15,7 @@ import type { GateCard } from "@/lib/gate";
 import AlertDialog, { type AlertRoute } from "@/components/alerts/AlertDialog";
 import { useHydrated, useNow } from "@/lib/useHydrated";
 import {
-  ORIGINS, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, dealMonths, inr, inrIf, monthLabel,
+  ORIGINS, type FareStat, type Origin, type Row, fareLink, formatDay, formatDuration, formatRange, formatStops, ageDays, dealMonths, inr, inrIf, monthLabel,
 } from "@/lib/fares";
 
 const seg = (on: boolean) =>
@@ -37,6 +37,7 @@ function cheapest(rows: Row[]) {
 export default function FlightFinder({
   origin,
   rows,
+  stats,
   baggage = {},
   showBest = true,
   initialDest = "",
@@ -46,6 +47,8 @@ export default function FlightFinder({
 }: {
   origin: Origin;
   rows: Row[];
+  /** Min, average and max fare per destination and trip length, from every stored fare. */
+  stats: Record<string, FareStat>;
   baggage?: Record<string, string>;
   /** False when the current month is nearly over (6 days or fewer left): the best-dates list is then left out. */
   showBest?: boolean;
@@ -146,16 +149,6 @@ export default function FlightFinder({
     );
   }, [pool, month, nights, dest, direct, sort]);
 
-  // Min, average and max fare per destination and trip length, over every priced date. A fare is only compared
-  // with trips of the same length, so a 3-night fare is never called cheap against 7-night prices.
-  const stats = useMemo(() => {
-    const t: Record<string, { sum: number; n: number; min: number; max: number }> = {};
-    for (const r of pool) {
-      const x = (t[`${r.d}:${r.nights}`] ??= { sum: 0, n: 0, min: Infinity, max: 0 });
-      x.sum += r.price; x.n += 1; x.min = Math.min(x.min, r.price); x.max = Math.max(x.max, r.price);
-    }
-    return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { avg: v.sum / v.n, min: v.min, max: v.max, n: v.n }]));
-  }, [pool]);
   // The three cheapest different departure dates for a destination and trip length (a fare is only compared
   // with the same stay), so people see more than the single best day.
   // The cheapest departure dates for a destination and trip length (a fare is only compared with the same stay), kept
@@ -352,6 +345,7 @@ export default function FlightFinder({
                                         <span className="t-num select-none truncate font-semibold blur-[5px]" aria-hidden>{formatRange(r.dep, r.ret)}</span>
                                       )}
                                       {r.airline && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{r.airline}</span>}
+                                      {ageDays(r.seen, now || undefined) >= 2 && <span className="shrink-0 text-[11px] text-muted-foreground">{ageDays(r.seen, now || undefined)}d old</span>}
                                     </span>
                                     <span className="flex shrink-0 items-baseline gap-2">
                                       {off >= 3 && <span className="text-xs font-semibold text-price">{off}% below avg</span>}

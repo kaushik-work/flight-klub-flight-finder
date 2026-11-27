@@ -112,6 +112,45 @@ export function daysLeftInMonth(now = new Date()): number {
   return new Date(Date.UTC(y, m, 0)).getUTCDate() - d + 1;
 }
 
+export type FareStat = { avg: number; min: number; max: number; n: number };
+
+/** Min, average and max fare for each destination and trip length. Computed over every stored fare, before the page is trimmed. */
+export function originStats(rows: Row[]): Record<string, FareStat> {
+  const t: Record<string, { sum: number; n: number; min: number; max: number }> = {};
+  for (const r of rows) {
+    const x = (t[`${r.d}:${r.nights}`] ??= { sum: 0, n: 0, min: Infinity, max: 0 });
+    x.sum += r.price; x.n += 1; x.min = Math.min(x.min, r.price); x.max = Math.max(x.max, r.price);
+  }
+  return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { avg: v.sum / v.n, min: v.min, max: v.max, n: v.n }]));
+}
+
+/**
+ * Fares are now kept for several days, so a city holds several times more than the page needs. For each destination, trip
+ * length and month, keep the cheapest few (enough for the top three dates and the month's lowest price) and the cheapest
+ * few direct ones (for the "direct only" filter). The averages are computed before this, from everything.
+ */
+export function trimRows(rows: Row[], perGroup = 6, perGroupDirect = 3): Row[] {
+  const groups = new Map<string, Row[]>();
+  for (const r of rows) {
+    const k = `${r.d}:${r.nights}:${r.month}`;
+    const g = groups.get(k);
+    if (g) g.push(r); else groups.set(k, [r]);
+  }
+  const keep = new Set<string>();
+  for (const g of groups.values()) {
+    g.sort((a, b) => a.price - b.price);
+    g.slice(0, perGroup).forEach((r) => keep.add(r.id));
+    g.filter((r) => r.stops === 0).slice(0, perGroupDirect).forEach((r) => keep.add(r.id));
+  }
+  return rows.filter((r) => keep.has(r.id));
+}
+
+/** Whole days since an ISO timestamp, or 0 if unknown. */
+export const ageDays = (iso: string, now = Date.now()) => {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? Math.max(0, Math.floor((now - t) / 86_400_000)) : 0;
+};
+
 export const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 /** A price with the first digit and the last two visible, one X per hidden digit: 22,287 reads ₹2XX87 and 104,500 reads ₹1XXX00. */
 export const inrMasked = (n: number) => {

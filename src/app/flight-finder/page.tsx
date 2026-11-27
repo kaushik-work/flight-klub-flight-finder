@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import FlightFinder from "@/components/FlightFinder";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import { DEFAULT_ORIGIN, DESTINATIONS, type Row, dealMonths, daysLeftInMonth, findOrigin, resolveDest } from "@/lib/fares";
+import { DEFAULT_ORIGIN, DESTINATIONS, type Row, dealMonths, daysLeftInMonth, findOrigin, originStats, trimRows, resolveDest } from "@/lib/fares";
 import { getBaggageLinks, getOriginRows } from "@/lib/flight-fares/store";
 import { SITE_URL, jsonLd } from "@/lib/site";
 
@@ -32,7 +32,10 @@ async function FinderContent({ searchParams }: { searchParams: SP }) {
   const [allRows, baggage] = await Promise.all([getOriginRows(origin.slug), getBaggageLinks()]);
   // Flight deals covers this month and the next three only; later months are left out everywhere on the page.
   const window = new Set(dealMonths());
-  const rows = allRows.filter((r) => window.has(r.month));
+  const inWindow = allRows.filter((r) => window.has(r.month));
+  // Fares are kept for several days: averages use all of them, the page gets only the cheapest few per group.
+  const stats = originStats(inWindow);
+  const rows = trimRows(inWindow);
   const dest = resolveDest(to, rows);
   const n = [3, 4, 5, 6, 7].includes(Number(nights)) ? Number(nights) : null;
   const m = month && rows.some((r) => r.month === month) ? month : null;
@@ -70,7 +73,7 @@ async function FinderContent({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
-      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} baggage={baggage} showBest={daysLeftInMonth() > 6} initialDest={dest} initialNights={n} initialMonth={m} fromExplicit={!!findOrigin(from)} />
+      <FlightFinder key={`${origin.slug}-${dest}-${n}-${m}`} origin={origin} rows={rows} stats={stats} baggage={baggage} showBest={daysLeftInMonth() > 6} initialDest={dest} initialNights={n} initialMonth={m} fromExplicit={!!findOrigin(from)} />
     </>
   );
 }
