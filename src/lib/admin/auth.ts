@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getFaresDb } from "@/lib/flight-fares/store";
 
@@ -82,6 +83,7 @@ export async function endSession() {
 
 /** The logged-in admin's username, or null. */
 export async function getAdmin(): Promise<string | null> {
+  await connection(); // the expiry check reads the clock, so this is request-time work, never part of a prerender
   const v = (await cookies()).get(ADMIN_COOKIE)?.value;
   if (!v) return null;
   const i = v.lastIndexOf(".");

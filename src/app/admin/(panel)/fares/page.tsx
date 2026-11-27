@@ -39,7 +39,8 @@ export default async function AdminFares({ searchParams }: { searchParams: Promi
     else if (view === "history") body = await HistoryView({ from: from || ORIGINS[0].slug, to: sp.to ?? "", nights: nights ?? 5 });
     else if (view === "cities") body = await CitiesView({ nights, show });
     else body = await ScraperView();
-  } catch {
+  } catch (error) {
+    console.error("admin fares view failed", view, error);
     body = <p className={`${card} p-6 text-muted-foreground`}>The database could not be reached. Try again in a moment.</p>;
   }
 
