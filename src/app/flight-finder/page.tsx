@@ -57,14 +57,12 @@ async function FinderContent({ searchParams }: { searchParams: SP }) {
         ? [{
             "@type": "ItemList",
             name: `Cheapest international flights from ${origin.name}`,
+            // Names and links only: the prices are what members pay to see, so they are not put in the page's search-engine data.
             itemListElement: list.map((f, i) => ({
               "@type": "ListItem",
               position: i + 1,
-              item: {
-                "@type": "Product",
-                name: `Flights from ${origin.name} to ${f.city}`,
-                offers: { "@type": "Offer", priceCurrency: "INR", price: f.price, availability: "https://schema.org/InStock" },
-              },
+              name: `Flights from ${origin.name} to ${f.city}`,
+              url: `${SITE_URL}/flight-finder?from=${origin.slug}&to=${f.d}`,
             })),
           }]
         : []),

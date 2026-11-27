@@ -26,13 +26,17 @@ export function cardLabel(key: string): string {
 export const cardKey = (origin: string, dest: string, nights: number) => `${origin}:${dest}:${nights}`;
 
 /**
- * A member sees every date. Before the trial existed (and for a plain login in this demo) an account is a member;
- * an account that chose the trial is one only while a paid plan is running.
+ * A member is someone whose paid plan is running. Logging in with a mobile number alone does NOT make anyone a member:
+ * until 27 Nov 2026 an account without a trial marker counted as one (a leftover from when sign-up always meant paying),
+ * so a plain login saw every date for free. Everyone without an active plan is on the trial instead (see ensureTrial).
  */
 export function isMember(user: User | null, now = Date.now()): boolean {
-  if (!user) return false;
-  if (user.plan) return !user.renews || new Date(user.renews).getTime() > now;
-  return !user.trial;
+  if (!user?.plan) return false;
+  return !user.renews || new Date(user.renews).getTime() > now;
+}
+/** Gives an account that has no running plan the (empty) trial, so it is offered the ₹89 unlock and the plans. */
+export function ensureTrial(u: User): User {
+  return isMember(u) || u.trial ? u : { ...u, trial: { bought: 0, unlocks: [] } };
 }
 export const unlockedUntil = (user: User | null, key: string, now = Date.now()): number | null => {
   const t = Math.max(0, ...(user?.trial?.unlocks ?? []).filter((x) => x.key === key).map((x) => new Date(x.until).getTime()));
@@ -91,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        setUser(s.user ?? null);
+        setUser(s.user ? ensureTrial(s.user as User) : null);
         setAlerts(validAlerts(s.alerts));
       }
     } catch {}
@@ -109,9 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback((u: User, alert?: AlertInput) => {
     const next = alert ? [{ ...alert, id: alertId(alert.origin, alert.dest), createdAt: new Date().toISOString() }, ...alerts.filter((x) => x.id !== alertId(alert.origin, alert.dest))] : alerts;
-    setUser(u);
+    const account = ensureTrial(u);
+    setUser(account);
     setAlerts(next);
-    save(u, next);
+    save(account, next);
   }, [alerts]);
   const updateUser = useCallback((patch: Partial<Pick<User, "name" | "city" | "email">>) => {
     if (!user) return;

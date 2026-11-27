@@ -16,7 +16,7 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
   const auth = useAuth();
   const user = hydrated ? auth.user : null;
   const member = isMember(user);
-  // A visitor taps a deal and gets the plan popup for it; a member just goes to the fares.
+  // A visitor taps a deal and gets the plan popup for it; anyone logged in goes to that fare in the finder, where they unlock it or already have it.
   const [gateFor, setGateFor] = useState<GateCard | null>(null);
   const have = ORIGINS.filter((o) => routes.some((r) => r.o === o.slug));
   const { origin: near } = useHomeOrigin();
@@ -56,8 +56,8 @@ export default function DealsGrid({ routes }: { routes: Route[] }) {
           const stops = formatStops(f.stops);
           return (
             <li key={f.d} style={{ "--i": idx } as CSSProperties} className="ticket-shell reveal">
-              {member ? (
-                <Link href={`/flight-finder?from=${origin}&to=${f.d}`} style={{ "--y": "10rem" } as CSSProperties} className="ticket group block">
+              {user ? (
+                <Link href={`/flight-finder?from=${origin}&to=${f.d}&nights=${f.nights}`} style={{ "--y": "10rem" } as CSSProperties} className="ticket group block">
                 <div className="relative flex h-40 items-end justify-between p-4 text-white" style={{ background: gradientFor(f.d) }}>
                   {pct > 0 && <span className="font-label absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-bold text-primary">{pct}% below average</span>}
                   <span className="font-label text-lg font-bold tracking-widest opacity-60">{f.code}</span>
