@@ -116,6 +116,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Price history: one small row per origin, destination, trip length, departure month and day, holding that day's lowest
+    // and highest stored fare. It is what a "usual price" and a price trend are made of, and it survives the 8-day clean-up
+    // below. About a thousand rows per origin per day, kept for 400 days.
+    try {
+      const hist = (await getFaresDb()).collection("fare_history");
+      await hist.createIndex({ at: 1 }, { expireAfterSeconds: 400 * 86_400 }).catch(() => {});
+      await hist.createIndex({ originSlug: 1, destinationSlug: 1, nights: 1 }).catch(() => {});
+      const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+      const groups = new Map<string, { dest: string; nights: number; month: string; min: number; max: number; sum: number; n: number }>();
+      for (const f of fares) {
+        const dest = String(f.destinationSlug), nights = Number(f.nights) || 0, month = String(f.departureMonth ?? String(f.departureDate).slice(0, 7));
+        const price = Number(f.price), k = `${dest}:${nights}:${month}`;
+        const g = groups.get(k);
+        if (!g) groups.set(k, { dest, nights, month, min: price, max: price, sum: price, n: 1 });
+        else { g.min = Math.min(g.min, price); g.max = Math.max(g.max, price); g.sum += price; g.n += 1; }
+      }
+      if (groups.size) {
+        await hist.bulkWrite(
+          [...groups.values()].map((g) => ({
+            updateOne: {
+              filter: { _id: `${originSlug}:${g.dest}:${g.nights}:${g.month}:${day}` as never },
+              update: {
+                $min: { min: g.min }, $max: { max: g.max }, $inc: { sum: g.sum, n: g.n },
+                $set: { originSlug, destinationSlug: g.dest, nights: g.nights, month: g.month, day, at: new Date() },
+              },
+              upsert: true,
+            },
+          })),
+          { ordered: false },
+        );
+      }
+    } catch (error) {
+      console.error("fare history write failed", error); // history is a bonus: never fail the fare store because of it
+    }
+
     // Remove what has aged out, and trips that have already left. A failure above leaves everything as it was.
     const cutoff = new Date(Date.now() - KEEP_DAYS * 86_400_000).toISOString();
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
-import { type CityStat, type DateFare, type LiveStatus, getCityStats, getDateFares, getFareMatrix, getLiveStatus, getMonthMatrix } from "@/lib/admin/data";
+import { type CityStat, type DateFare, type LiveStatus, getCityStats, getDateFares, getFareMatrix, getHistory, getLiveStatus, getMonthMatrix } from "@/lib/admin/data";
 import { DROPLETS, TOTAL_DESTINATIONS } from "@/lib/admin/droplets";
 import { formatDay, inr, monthLabel, ORIGINS } from "@/lib/fares";
 
 type SP = { view?: string; from?: string; to?: string; nights?: string; show?: string };
-const VIEWS = [["month", "Month wise"], ["date", "Date wise"], ["cities", "All cities"], ["scraper", "Scraper status"]] as const;
+const VIEWS = [["month", "Month wise"], ["date", "Date wise"], ["cities", "All cities"], ["history", "Price history"], ["scraper", "Scraper status"]] as const;
 const NIGHTS = [3, 4, 5, 6, 7];
 const cityName = (slug: string) => ORIGINS.find((o) => o.slug === slug)?.name ?? slug;
 
@@ -36,6 +36,7 @@ export default async function AdminFares({ searchParams }: { searchParams: Promi
   try {
     if (view === "month") body = await MonthView({ from, nights, show });
     else if (view === "date") body = await DateView({ from: from || ORIGINS[0].slug, to: sp.to ?? "", nights });
+    else if (view === "history") body = await HistoryView({ from: from || ORIGINS[0].slug, to: sp.to ?? "", nights: nights ?? 5 });
     else if (view === "cities") body = await CitiesView({ nights, show });
     else body = await ScraperView();
   } catch {
@@ -227,6 +228,47 @@ function Calendar({ month, byDate, top3, tint }: { month: string; byDate: Map<st
         })}
       </div>
     </section>
+  );
+}
+
+/* ---------- Price history: the lowest fare on each day we have stored ---------- */
+async function HistoryView({ from, to, nights }: { from: string; to: string; nights: number }) {
+  const dests = (await getMonthMatrix(from, null)).rows.sort((a, b) => a.city.localeCompare(b.city));
+  const dest = dests.some((d) => d.slug === to) ? to : dests[0]?.slug ?? "";
+  const days = dest ? await getHistory(from, dest, nights) : [];
+  const months = [...new Set(days.flatMap((d) => Object.keys(d.byMonth)))].sort();
+  const max = Math.max(1, ...days.map((d) => d.lowest));
+  return (
+    <>
+      <Filters view="history">
+        <Field label="Flying from"><select name="from" defaultValue={from} className={select}>{ORIGINS.map((o) => <option key={o.slug} value={o.slug}>{o.name}</option>)}</select></Field>
+        <Field label="Going to"><select name="to" defaultValue={dest} className={select}>{dests.map((d) => <option key={d.slug} value={d.slug}>{d.city}</option>)}</select></Field>
+        <Field label="Trip length"><select name="nights" defaultValue={nights} className={select}>{NIGHTS.map((n) => <option key={n} value={n}>{n} nights</option>)}</select></Field>
+      </Filters>
+      {days.length === 0 ? (
+        <p className={`${card} p-6 text-muted-foreground`}>No history yet for this route. A row is added each day the scraper stores fares for it, so a trend appears after a few days.</p>
+      ) : (
+        <div className={`${card} overflow-x-auto`}>
+          <table className="w-full min-w-[34rem] text-sm">
+            <thead><tr className="border-b border-border bg-muted/50 text-left">
+              <th className={`${th} px-4`}>Day</th><th className={`${th} text-right`}>Lowest</th><th className={`${th} w-1/3`}> </th>
+              {months.map((m) => <th key={m} className={`${th} text-right`}>{monthLabel(m).split(" ")[0]}</th>)}
+            </tr></thead>
+            <tbody className="divide-y divide-border/70">
+              {days.map((d) => (
+                <tr key={d.day}>
+                  <td className="px-4 py-2.5 font-semibold">{formatDay(d.day)}</td>
+                  <td className="t-num px-3 py-2.5 text-right font-semibold text-price">{inr(d.lowest)}</td>
+                  <td className="px-3 py-2.5"><span className="block h-2 rounded-full bg-muted"><span className="block h-full rounded-full bg-primary" style={{ width: `${(d.lowest / max) * 100}%` }} /></span></td>
+                  {months.map((m) => <td key={m} className="t-num px-3 py-2.5 text-right">{d.byMonth[m] !== undefined ? inr(d.byMonth[m]) : "-"}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">The lowest stored fare for this route and trip length on each day, and the lowest for each departure month. Kept for 400 days. A day only appears once the scraper has stored fares that day.</p>
+    </>
   );
 }
 

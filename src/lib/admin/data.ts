@@ -153,3 +153,20 @@ export async function getLiveStatus(): Promise<LiveStatus[]> {
     failed: Number(d.failed ?? 0), passStartedAt: (d.passStartedAt as string | null) ?? null, updatedAt: String(d.updatedAt ?? ""), lastStored: d.lastStored,
   }));
 }
+
+export type HistoryDay = { day: string; lowest: number; byMonth: Record<string, number> };
+
+/** Daily lowest stored fare for one route and trip length, newest first, with each departure month's lowest. */
+export async function getHistory(origin: string, dest: string, nights: number): Promise<HistoryDay[]> {
+  const col = (await getFaresDb()).collection("fare_history");
+  const docs = await col.find({ originSlug: origin, destinationSlug: dest, nights }).sort({ day: -1 }).limit(60 * 6).toArray();
+  const by = new Map<string, HistoryDay>();
+  for (const d of docs) {
+    const day = String(d.day);
+    let h = by.get(day);
+    if (!h) by.set(day, (h = { day, lowest: Infinity, byMonth: {} }));
+    h.byMonth[String(d.month)] = Number(d.min);
+    h.lowest = Math.min(h.lowest, Number(d.min));
+  }
+  return [...by.values()].sort((a, b) => b.day.localeCompare(a.day)).slice(0, 60);
+}
